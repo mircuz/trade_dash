@@ -1,6 +1,7 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_daq as daq
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
@@ -21,7 +22,36 @@ app.layout = html.Div([
             dcc.Input(className='one columns', id='stockName', value='AAPL', type='text'),
     ]),
     dcc.Graph(id='stockGraph'),
+
+    html.Strong('Tools'),
+    html.Div(
+        className='row',
+        children=[
+            daq.BooleanSwitch(
+                label='EMA20',
+                className='one columns',
+                id='EMA20Toggle',
+                on=False,
+                color='#4169E1',
+            ),
+            daq.BooleanSwitch(
+                label='EMA50',
+                className='one columns',
+                id='EMA50Toggle',
+                on=False,
+                color='#9400D3',
+            ),
+            daq.BooleanSwitch(
+                label='SMA200',
+                className='one columns',
+                id='SMA200',
+                on=False,
+                color="#FF1493",
+            ),
+        ]
+    )
 ])
+
 
 
 # Callbacks
