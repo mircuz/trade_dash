@@ -64,10 +64,13 @@ app.layout = html.Div([
      Input('SMA200Toggle','on')]
     )
 def updateStock(stockName,EMA20,EMA50,SMA200) :
-        if len(stockName)==4:
+        if len(stockName)>=4:
             currentStock = Stock(stockName)
-            figHandler = currentStock.updateGraphs(EMA20,EMA50,SMA200)
-            return figHandler
+            if currentStock.stockValue.empty is False :
+                figHandler = currentStock.updateGraphs(EMA20,EMA50,SMA200)
+                return figHandler
+            else :
+                raise PreventUpdate
         else : 
             raise PreventUpdate 
 
@@ -90,8 +93,11 @@ class Stock(object):
                 open=self.stockValue['Open'].array,
                 high=self.stockValue['High'].array,
                 low=self.stockValue['Low'].array,
-                close=self.stockValue['Close'].array),
+                close=self.stockValue['Close'].array,
+                name=self.stockName),
             row=1, col=1)
+
+        # Optional Moving Average Plots
         if SMA200 == True :
             sma200 = self.computeMA(nDays=200,kind='simple')
             fig.add_trace(
@@ -99,14 +105,39 @@ class Stock(object):
                     x=self.stockValue['Close'][-200:].index,
                     y=sma200,
                     marker_color='#FF1493',
-                )
-            )
+                    name='SMA200',
+                ),
+            row=1, col=1)
+
+        if EMA50 == True :
+            ema50 = self.computeMA(nDays=50,kind='exp')
+            fig.add_trace(
+                go.Scatter(
+                    x=self.stockValue['Close'][-50:].index,
+                    y=ema50,
+                    marker_color='#9400D3',
+                    name='EMA50',
+                ),
+            row=1, col=1)
+        
+        if EMA20 == True :
+            ema20 = self.computeMA(nDays=20,kind='exp')
+            fig.add_trace(
+                go.Scatter(
+                    x=self.stockValue['Close'][-20:].index,
+                    y=ema20,
+                    marker_color='#4169E1',
+                    name='EMA20',
+                ),
+            row=1, col=1)
+
         # ScatterPlot
         fig.add_trace(
             go.Scatter(
                 x=self.stockValue['Close'].index,
                 y=self.stockValue['Close'].array, 
-                marker_color='black'),
+                marker_color='black',
+                name=self.stockName),
             row=2, col=1)
         
         # MinMax Plot
@@ -116,7 +147,7 @@ class Stock(object):
                 mode="markers",
                 x=self.stockValue['Close'][maxs].index,
                 y=self.stockValue['Close'].array[maxs], 
-                marker_symbol=144, marker_color='rgb(251,180,174)', marker_line_width=5,
+                marker_symbol=144, marker_color='rgb(251,180,174)', marker_line_width=2,
                 showlegend=False),
             row=2, col=1)
         fig.add_trace(
@@ -124,9 +155,11 @@ class Stock(object):
                 mode="markers",
                 x=self.stockValue['Close'][mins].index,
                 y=self.stockValue['Close'].array[mins], 
-                marker_symbol=143, marker_color='#00CC96', marker_line_width=5,
+                marker_symbol=143, marker_color='#00CC96', marker_line_width=2,
                 showlegend=False),
             row=2, col=1)
+
+
 
         fig.update(layout_xaxis_rangeslider_visible=False)
         fig = self.layout_update(fig)
@@ -159,7 +192,12 @@ class Stock(object):
             SMA.reverse()
             return SMA
         if kind == 'exp' :
-            pass
+            EMA = [(1/nDays)*sum(self.stockValue['Close'].array[-2*nDays:-nDays])]
+            K = 2/(nDays+1)
+            for i in range(1,nDays) :
+                EMA.append(
+                    K* (self.stockValue['Close'].array[-nDays+i] - EMA[-1]) + EMA[-1])
+            return EMA
     
          
 
