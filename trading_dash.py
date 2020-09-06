@@ -2,12 +2,13 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import yfinance as yf
 import scipy.signal as signal
+import numpy as np
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -44,7 +45,7 @@ app.layout = html.Div([
             daq.BooleanSwitch(
                 label='SMA200',
                 className='one columns',
-                id='SMA200',
+                id='SMA200Toggle',
                 on=False,
                 color="#FF1493",
             ),
@@ -57,12 +58,15 @@ app.layout = html.Div([
 # Callbacks
 @app.callback(
     Output('stockGraph','figure'),
-    [Input('stockName','value')]
+    [Input('stockName','value'),
+     Input('EMA20Toggle','on'),
+     Input('EMA50Toggle','on'),
+     Input('SMA200Toggle','on')]
     )
-def updateStock(stockName) :
+def updateStock(stockName,EMA20,EMA50,SMA200) :
         if len(stockName)==4:
             currentStock = Stock(stockName)
-            figHandler = currentStock.updateGraphs()
+            figHandler = currentStock.updateGraphs(EMA20,EMA50,SMA200)
             return figHandler
         else : 
             raise PreventUpdate 
@@ -77,7 +81,7 @@ class Stock(object):
         self.stockValue = self.stockTicker.history(period='2y',interval='1d',group_by='ticker')
 
 
-    def updateGraphs(self) :
+    def updateGraphs(self,EMA20,EMA50,SMA200) :
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.005)
         # OHLCPlot
         fig.add_trace(
@@ -88,6 +92,15 @@ class Stock(object):
                 low=self.stockValue['Low'].array,
                 close=self.stockValue['Close'].array),
             row=1, col=1)
+        if SMA200 == True :
+            sma200 = self.computeMA(nDays=200,kind='simple')
+            fig.add_trace(
+                go.Scatter(
+                    x=self.stockValue['Close'][-200:].index,
+                    y=sma200,
+                    marker_color='#FF1493',
+                )
+            )
         # ScatterPlot
         fig.add_trace(
             go.Scatter(
@@ -140,7 +153,11 @@ class Stock(object):
 
     def computeMA(self,nDays=20,kind='simple') :
         if kind == 'simple' :
-            coeff = (1/nDays)*sum(self.stockValue['Close'].array[-nDays])
+            SMA = []
+            for i in range(nDays) :
+                SMA.append((1/nDays)*sum(self.stockValue['Close'].array[np.arange(-i-nDays,-i)]))
+            SMA.reverse()
+            return SMA
         if kind == 'exp' :
             pass
     
