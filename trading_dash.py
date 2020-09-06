@@ -147,16 +147,18 @@ class Stock(object):
                 mode="markers",
                 x=self.stockValue['Close'][maxs].index,
                 y=self.stockValue['Close'].array[maxs], 
-                marker_symbol=144, marker_color='rgb(251,180,174)', marker_line_width=2,
-                showlegend=False),
+                marker_symbol=141, marker_color='rgb(251,180,174)', marker_line_width=2,
+                showlegend=False,
+                name='MAX'),
             row=2, col=1)
         fig.add_trace(
             go.Scatter(
                 mode="markers",
                 x=self.stockValue['Close'][mins].index,
                 y=self.stockValue['Close'].array[mins], 
-                marker_symbol=143, marker_color='#00CC96', marker_line_width=2,
-                showlegend=False),
+                marker_symbol=141, marker_color='#00CC96', marker_line_width=2,
+                showlegend=False,
+                name='MIN'),
             row=2, col=1)
 
 
