@@ -2,6 +2,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
+import dash_table
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
@@ -23,6 +24,11 @@ app.layout = html.Div([
             dcc.Input(className='one columns', id='stockName', value='AAPL', type='text'),
     ]),
     dcc.Graph(id='stockGraph'),
+
+    dcc.ConfirmDialog(
+        id='noDataFound',
+        message='No Data Found, check Stock Name',
+    ),
 
     html.Strong('Tools'),
     html.Div(
@@ -50,6 +56,10 @@ app.layout = html.Div([
                 color="#FF1493",
             ),
         ]
+    ),
+
+    html.Table(
+        id = 'stockData'
     )
 ])
 
@@ -64,15 +74,23 @@ app.layout = html.Div([
      Input('SMA200Toggle','on')]
     )
 def updateStock(stockName,EMA20,EMA50,SMA200) :
-        if len(stockName)>=4:
-            currentStock = Stock(stockName)
-            if currentStock.stockValue.empty is False :
-                figHandler = currentStock.updateGraphs(EMA20,EMA50,SMA200)
-                return figHandler
-            else :
-                raise PreventUpdate
-        else : 
-            raise PreventUpdate 
+    if len(stockName)>=4:
+        currentStock = Stock(stockName)
+        if currentStock.stockValue.empty is False :
+            figHandler = currentStock.updateGraphs(EMA20,EMA50,SMA200)
+            return figHandler
+        else :
+            raise PreventUpdate
+    else : 
+        raise PreventUpdate 
+
+
+@app.callback(Output('noDataFound', 'displayed'),
+              [Input('stockData', 'table')])
+def display_confirm(graphExist):
+    if currentStock.stockValue.empty is True :
+        return True
+    return False
 
 
 # Class Definition
