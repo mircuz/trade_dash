@@ -21,16 +21,9 @@ app.layout = html.Div([
     html.H2("PyTrade"),
     html.Div(className='row', children=[
             html.P(className='two columns', children="Enter the name of the Stock "),
-            dcc.Input(className='one columns', id='stockName', value='AAPL', type='text'),
+            dcc.Input(className='one columns', id='stockName', value='AAPL', type='text',debounce=True),
     ]),
-    dcc.Graph(id='stockGraph'),
 
-    dcc.ConfirmDialog(
-        id='noDataFound',
-        message='No Data Found, check Stock Name',
-    ),
-
-    html.Strong('Tools'),
     html.Div(
         className='row',
         children=[
@@ -55,42 +48,56 @@ app.layout = html.Div([
                 on=False,
                 color="#FF1493",
             ),
+            daq.BooleanSwitch(
+                label='Momentum',
+                className='one columns',
+                id='MomentumToggle',
+                on=False,
+                color='#C0C0C0',
+            ),
         ]
     ),
 
-    html.Table(
-        id = 'stockData'
-    )
+    dcc.Graph(id='stockGraph', config={'scrollZoom':True}),
+
+    dcc.ConfirmDialog(
+        id='noDataFound',
+        message='No Data Found, check Stock Name',
+    ),
 ])
 
 
 
 # Callbacks
 @app.callback(
-    Output('stockGraph','figure'),
+    [Output('stockGraph','figure'),
+     Output('noDataFound', 'displayed')],
     [Input('stockName','value'),
      Input('EMA20Toggle','on'),
      Input('EMA50Toggle','on'),
-     Input('SMA200Toggle','on')]
+     Input('SMA200Toggle','on'),
+     Input('MomentumToggle','on')]
     )
-def updateStock(stockName,EMA20,EMA50,SMA200) :
+def updateStock(stockName,EMA20,EMA50,SMA200,Momentum) :
     if len(stockName)>=4:
         currentStock = Stock(stockName)
         if currentStock.stockValue.empty is False :
-            figHandler = currentStock.updateGraphs(EMA20,EMA50,SMA200)
-            return figHandler
+            figHandler = currentStock.updateGraphs(EMA20,EMA50,SMA200,Momentum)
+            return [
+                figHandler,
+                False
+                    ]
         else :
-            raise PreventUpdate
+            return [
+                dash.no_update,
+                True
+            ]
     else : 
-        raise PreventUpdate 
+        return [
+            dash.no_update,
+            True
+        ]
 
-
-@app.callback(Output('noDataFound', 'displayed'),
-              [Input('stockData', 'table')])
-def display_confirm(graphExist):
-    if currentStock.stockValue.empty is True :
-        return True
-    return False
 
 
 # Class Definition
@@ -102,8 +109,13 @@ class Stock(object):
         self.stockValue = self.stockTicker.history(period='2y',interval='1d',group_by='ticker')
 
 
-    def updateGraphs(self,EMA20,EMA50,SMA200) :
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.005)
+    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum) :
+        if Momentum == True :
+            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005)
+            scatterPlotRow = 3
+        else :
+            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.005)
+            scatterPlotRow= 2
         # OHLCPlot
         fig.add_trace(
             go.Ohlc(
@@ -156,7 +168,7 @@ class Stock(object):
                 y=self.stockValue['Close'].array, 
                 marker_color='black',
                 name=self.stockName),
-            row=2, col=1)
+            row=scatterPlotRow, col=1)
         
         # MinMax Plot
         maxs, mins = self.computeMinMax()
@@ -168,7 +180,7 @@ class Stock(object):
                 marker_symbol=141, marker_color='rgb(251,180,174)', marker_line_width=2,
                 showlegend=False,
                 name='MAX'),
-            row=2, col=1)
+            row=scatterPlotRow, col=1)
         fig.add_trace(
             go.Scatter(
                 mode="markers",
@@ -177,8 +189,7 @@ class Stock(object):
                 marker_symbol=141, marker_color='#00CC96', marker_line_width=2,
                 showlegend=False,
                 name='MIN'),
-            row=2, col=1)
-
+            row=scatterPlotRow, col=1)
 
 
         fig.update(layout_xaxis_rangeslider_visible=False)
