@@ -106,7 +106,8 @@ class Stock(object):
     def __init__(self,stockName) :
         self.stockName = stockName
         self.stockTicker = yf.Ticker(self.stockName.upper())
-        self.stockValue = self.stockTicker.history(period='2y',interval='1d',group_by='ticker')
+        self.stockValue = self.stockTicker.history(period='2y',interval='1d',group_by='ticker') 
+        self.arrays = []
 
 
     def updateGraphs(self,EMA20,EMA50,SMA200,Momentum) :
@@ -126,6 +127,9 @@ class Stock(object):
                 close=self.stockValue['Close'].array,
                 name=self.stockName),
             row=1, col=1)
+
+        # TODO Add an hidden table to collect all indicators, that have to be computed on Init 
+        # Import figure as state and 
 
         # Optional Moving Average Plots
         if SMA200 == True :
@@ -160,6 +164,17 @@ class Stock(object):
                     name='EMA20',
                 ),
             row=1, col=1)
+        if Momentum == True :
+            MomDays = 15
+            Momentum = self.computeMomentum(MomDays)
+            fig.add_trace(
+                go.Scatter(
+                    x=self.stockValue['Close'].index[MomDays:],
+                    y=Momentum,
+                    marker_color='#C0C0C0',
+                    name='Momentum',
+                ),row=2, col=1)
+            
 
         # ScatterPlot
         fig.add_trace(
@@ -229,7 +244,13 @@ class Stock(object):
                 EMA.append(
                     K* (self.stockValue['Close'].array[-nDays+i] - EMA[-1]) + EMA[-1])
             return EMA
-    
+
+    def computeMomentum(self,nDays=15) :
+        Mom = []
+        for days in range(len(self.stockValue['Close'].array[nDays:])) :
+            Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
+        return Mom
+
          
 
 
