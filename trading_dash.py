@@ -10,6 +10,7 @@ from plotly.subplots import make_subplots
 import yfinance as yf
 import scipy.signal as signal
 import numpy as np
+import pandas as pd
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -107,12 +108,11 @@ class Stock(object):
         self.stockName = stockName
         self.stockTicker = yf.Ticker(self.stockName.upper())
         self.stockValue = self.stockTicker.history(period='2y',interval='1d',group_by='ticker') 
-        self.arrays = []
 
 
     def updateGraphs(self,EMA20,EMA50,SMA200,Momentum) :
         if Momentum == True :
-            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005)
+            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005, row_heights=[0.45, 0.1, 0.45])
             scatterPlotRow = 3
         else :
             fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.005)
@@ -164,14 +164,33 @@ class Stock(object):
                     name='EMA20',
                 ),
             row=1, col=1)
+
         if Momentum == True :
             MomDays = 15
             Momentum = self.computeMomentum(MomDays)
+            df = pd.DataFrame({'mom' : Momentum, 'date' : self.stockValue['Close'].index[MomDays:]})
+            # Momentum Raise
             fig.add_trace(
-                go.Scatter(
-                    x=self.stockValue['Close'].index[MomDays:],
-                    y=Momentum,
-                    marker_color='#C0C0C0',
+                go.Bar(
+                    x=df.where(df['mom'] > 10).dropna()['date'],
+                    y=df.where(df['mom'] > 10).dropna()['mom'],
+                    marker_color='turquoise',
+                    name='Momentum',
+                ),row=2, col=1)
+            # Momentum Down
+            fig.add_trace(
+                go.Bar(
+                    x=df.where(df['mom'] < -10).dropna()['date'],
+                    y=df.where(df['mom'] < -10).dropna()['mom'],
+                    marker_color='purple',
+                    name='Momentum',
+                ),row=2, col=1)
+            # Momentum Steady
+            fig.add_trace(
+                go.Bar(
+                    x=df.where((df['mom'] < 10) & (df['mom'] > -10)).dropna()['date'],
+                    y=df.where((df['mom'] < 10) & (df['mom'] > -10)).dropna()['mom'],
+                    marker_color='silver',
                     name='Momentum',
                 ),row=2, col=1)
             
