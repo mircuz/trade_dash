@@ -1,130 +1,10 @@
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-import dash_daq as daq
-import dash_table
-from dash.dependencies import Input, Output, State
-from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import yfinance as yf
 import scipy.signal as signal
 import numpy as np
 import pandas as pd
-import os
-from flask_caching import Cache
-import time
 
-
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-CACHE_CONFIG = {
-    # try 'filesystem' if you don't want to setup redis
-    'CACHE_TYPE': 'simple',
-    'CACHE_DEFAULT_TIMEOUT' : 300
-}
-cache = Cache()
-cache.init_app(app.server, config=CACHE_CONFIG)
-
-
-# Dash Layout
-app.layout = html.Div([
-    html.H2("Prototype of an Advisoring Dashboard"),
-    html.Div(className='row', children=[
-            html.P(className='two columns', children="Enter the name of the Stock "),
-            dcc.Input(className='one columns', id='stockName', value='AAPL', type='text',debounce=True),
-    ]),
-
-    html.Div(
-        className='row',
-        children=[
-            daq.BooleanSwitch(
-                label='EMA20',
-                className='one columns',
-                id='EMA20Toggle',
-                on=False,
-                color='#4169E1',
-            ),
-            daq.BooleanSwitch(
-                label='EMA50',
-                className='one columns',
-                id='EMA50Toggle',
-                on=False,
-                color='#9400D3',
-            ),
-            daq.BooleanSwitch(
-                label='SMA200',
-                className='one columns',
-                id='SMA200Toggle',
-                on=False,
-                color="#FF1493",
-            ),
-            daq.BooleanSwitch(
-                label='Momentum',
-                className='one columns',
-                id='MomentumToggle',
-                on=False,
-                color='#C0C0C0',
-            ),
-        ]
-    ),
-    html.H4(id='graphTitle', children=''),
-    dcc.Graph(id='stockGraph', config={'scrollZoom':True}),
-
-    dcc.ConfirmDialog(
-        id='noDataFound',
-        message='No Data Found, check Stock Name',
-    ),
-])
-
-
-
-# Callbacks
-@app.callback(
-    [Output('graphTitle','children')],
-    Input('stockName','value')
-)
-def updateStock(stockName) :
-    if len(stockName)>=4:
-        globalStore(stockName)
-        return [stockMem.stockTicker.info['shortName'] + ' Stocks']
-
-
-@app.callback(
-    [Output('stockGraph','figure'),
-     Output('noDataFound', 'displayed')],
-    [Input('graphTitle','children'),
-     Input('EMA20Toggle','on'),
-     Input('EMA50Toggle','on'),
-     Input('SMA200Toggle','on'),
-     Input('MomentumToggle','on')]
-    )
-def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum) :
-    if stockMem.stockValue.empty is False :
-        stockMem.updateGraphs(EMA20,EMA50,SMA200,Momentum)
-        return [
-            stockMem.figHandler,
-            False
-                ]
-    else :
-        return [
-            dash.no_update,
-            True
-        ]
-
-
-stockMem = []
-
-@cache.memoize()
-def globalStore(name) :
-    global stockMem
-    stockMem = Stock(name)
-    stockMem.computeMomentum()
-    stockMem.EMA20  = stockMem.computeMA(nDays=20, kind='exp')
-    stockMem.EMA50  = stockMem.computeMA(nDays=50, kind='exp')
-    stockMem.SMA200 = stockMem.computeMA(nDays=200, kind='simple')
-    return stockMem
 
 # Class Definitions
 class Stock(object) :
@@ -259,6 +139,7 @@ class Stock(object) :
                 showlegend=False,
                 # title=self.stockTicker.info['shortName'] + ' Stocks',
                 height=700,
+                margin=dict(l=80, r=80, t=20, b=10)
                 # shapes = [dict(
                 #             x0='2020-08-09', x1='2020-08-09', 
                 #             y0=0, y1=1, xref='x', yref='paper',
@@ -279,7 +160,6 @@ class Stock(object) :
         for days in range(len(self.stockValue['Close'].array[nDays:])) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
         self.momentum = Mom 
-        print('Momentum calc completed')
 
 
     def computeMA(self,nDays=20,kind='simple') :
@@ -295,7 +175,3 @@ class Stock(object) :
             for i in range(1,nDays) :
                 EMA.append(K* (self.stockValue['Close'].array[-nDays+i] - EMA[-1]) + EMA[-1])
             return EMA
-
-
-if __name__ == '__main__':
-    app.run_server(debug=True)
