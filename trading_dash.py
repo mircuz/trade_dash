@@ -11,15 +11,26 @@ import yfinance as yf
 import scipy.signal as signal
 import numpy as np
 import pandas as pd
+import os
+from flask_caching import Cache
+import time
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+CACHE_CONFIG = {
+    # try 'filesystem' if you don't want to setup redis
+    'CACHE_TYPE': 'simple',
+    'CACHE_DEFAULT_TIMEOUT' : 300
+}
+cache = Cache()
+cache.init_app(app.server, config=CACHE_CONFIG)
+
 
 # Dash Layout
 app.layout = html.Div([
-    html.H2("PyTrade"),
+    html.H2("Prototype of an Advisoring Dashboard"),
     html.Div(className='row', children=[
             html.P(className='two columns', children="Enter the name of the Stock "),
             dcc.Input(className='one columns', id='stockName', value='AAPL', type='text',debounce=True),
@@ -58,7 +69,7 @@ app.layout = html.Div([
             ),
         ]
     ),
-
+    html.H4(id='graphTitle', children=''),
     dcc.Graph(id='stockGraph', config={'scrollZoom':True}),
 
     dcc.ConfirmDialog(
@@ -71,48 +82,68 @@ app.layout = html.Div([
 
 # Callbacks
 @app.callback(
+    [Output('graphTitle','children')],
+    Input('stockName','value')
+)
+def updateStock(stockName) :
+    if len(stockName)>=4:
+        globalStore(stockName)
+        return [stockMem.stockTicker.info['shortName'] + ' Stocks']
+
+
+@app.callback(
     [Output('stockGraph','figure'),
      Output('noDataFound', 'displayed')],
-    [Input('stockName','value'),
+    [Input('graphTitle','children'),
      Input('EMA20Toggle','on'),
      Input('EMA50Toggle','on'),
      Input('SMA200Toggle','on'),
      Input('MomentumToggle','on')]
     )
-def updateStock(stockName,EMA20,EMA50,SMA200,Momentum) :
-    if len(stockName)>=4:
-        currentStock = Stock(stockName)
-        if currentStock.stockValue.empty is False :
-            figHandler = currentStock.updateGraphs(EMA20,EMA50,SMA200,Momentum)
-            return [
-                figHandler,
-                False
-                    ]
-        else :
-            return [
-                dash.no_update,
-                True
-            ]
-    else : 
+def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum) :
+    if stockMem.stockValue.empty is False :
+        stockMem.updateGraphs(EMA20,EMA50,SMA200,Momentum)
+        return [
+            stockMem.figHandler,
+            False
+                ]
+    else :
         return [
             dash.no_update,
             True
         ]
 
 
+stockMem = []
 
-# Class Definition
-class Stock(object):
+@cache.memoize()
+def globalStore(name) :
+    global stockMem
+    stockMem = Stock(name)
+    stockMem.computeMomentum()
+    stockMem.EMA20  = stockMem.computeMA(nDays=20, kind='exp')
+    stockMem.EMA50  = stockMem.computeMA(nDays=50, kind='exp')
+    stockMem.SMA200 = stockMem.computeMA(nDays=200, kind='simple')
+    return stockMem
+
+# Class Definitions
+class Stock(object) :
 
     def __init__(self,stockName) :
         self.stockName = stockName
         self.stockTicker = yf.Ticker(self.stockName.upper())
-        self.stockValue = self.stockTicker.history(period='2y',interval='1d',group_by='ticker') 
-
+        self.stockValue = self.stockTicker.history(period='5y',interval='1d',group_by='ticker') 
+        self.momentum   = []
+        self.EMA20      = []
+        self.EMA50      = []
+        self.SMA200     = []
+        self.figHandler = []
+        
 
     def updateGraphs(self,EMA20,EMA50,SMA200,Momentum) :
         if Momentum == True :
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005, row_heights=[0.45, 0.1, 0.45])
+            # Embed the Momentum graph between the OHLC and minMax graph
             scatterPlotRow = 3
         else :
             fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.005)
@@ -128,38 +159,32 @@ class Stock(object):
                 name=self.stockName),
             row=1, col=1)
 
-        # TODO Add an hidden table to collect all indicators, that have to be computed on Init 
-        # Import figure as state and 
-
         # Optional Moving Average Plots
         if SMA200 == True :
-            sma200 = self.computeMA(nDays=200,kind='simple')
             fig.add_trace(
                 go.Scatter(
                     x=self.stockValue['Close'][-200:].index,
-                    y=sma200,
+                    y=self.SMA200,
                     marker_color='#FF1493',
                     name='SMA200',
                 ),
             row=1, col=1)
 
         if EMA50 == True :
-            ema50 = self.computeMA(nDays=50,kind='exp')
             fig.add_trace(
                 go.Scatter(
                     x=self.stockValue['Close'][-50:].index,
-                    y=ema50,
+                    y=self.EMA50,
                     marker_color='#9400D3',
                     name='EMA50',
                 ),
             row=1, col=1)
         
         if EMA20 == True :
-            ema20 = self.computeMA(nDays=20,kind='exp')
             fig.add_trace(
                 go.Scatter(
                     x=self.stockValue['Close'][-20:].index,
-                    y=ema20,
+                    y=self.EMA20,
                     marker_color='#4169E1',
                     name='EMA20',
                 ),
@@ -167,8 +192,7 @@ class Stock(object):
 
         if Momentum == True :
             MomDays = 15
-            Momentum = self.computeMomentum(MomDays)
-            df = pd.DataFrame({'mom' : Momentum, 'date' : self.stockValue['Close'].index[MomDays:]})
+            df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[MomDays:]})
             # Momentum Raise
             fig.add_trace(
                 go.Bar(
@@ -207,46 +231,55 @@ class Stock(object):
         # MinMax Plot
         maxs, mins = self.computeMinMax()
         fig.add_trace(
-            go.Scatter(
-                mode="markers",
-                x=self.stockValue['Close'][maxs].index,
-                y=self.stockValue['Close'].array[maxs], 
-                marker_symbol=141, marker_color='rgb(251,180,174)', marker_line_width=2,
-                showlegend=False,
-                name='MAX'),
+           go.Scatter(
+               mode="markers",
+               x=self.stockValue['Close'][maxs].index,
+               y=self.stockValue['Close'].array[maxs], 
+               marker_symbol=141, marker_color='rgb(251,180,174)', marker_line_width=2,
+               showlegend=False,
+               name='MAX'),
             row=scatterPlotRow, col=1)
         fig.add_trace(
-            go.Scatter(
-                mode="markers",
-                x=self.stockValue['Close'][mins].index,
-                y=self.stockValue['Close'].array[mins], 
-                marker_symbol=141, marker_color='#00CC96', marker_line_width=2,
-                showlegend=False,
-                name='MIN'),
-            row=scatterPlotRow, col=1)
+           go.Scatter(
+               mode="markers",
+               x=self.stockValue['Close'][mins].index,
+               y=self.stockValue['Close'].array[mins], 
+               marker_symbol=141, marker_color='#00CC96', marker_line_width=2,
+               showlegend=False,
+               name='MIN'),
+           row=scatterPlotRow, col=1)
 
 
         fig.update(layout_xaxis_rangeslider_visible=False)
-        fig = self.layout_update(fig)
-        return fig
+        self.figHandler = self.layout_update(fig)
     
 
     def layout_update(self, fig) :
         fig.update_layout(
                 showlegend=False,
-                title=self.stockTicker.info['shortName'] + ' Stocks',
+                # title=self.stockTicker.info['shortName'] + ' Stocks',
                 height=700,
-                shapes = [dict(
-                            x0='2020-08-09', x1='2020-08-09', y0=0, y1=1, xref='x', yref='paper',
-                            line_width=2)],
+                # shapes = [dict(
+                #             x0='2020-08-09', x1='2020-08-09', 
+                #             y0=0, y1=1, xref='x', yref='paper',
+                #             line_width=2
+                #         )],
             )
         return fig
 
 
     def computeMinMax(self) :
-        peaksList, _ = signal.find_peaks(self.stockValue['Close'].array,distance=5)
-        lowsList, _ = signal.find_peaks(-self.stockValue['Close'].array,distance=5)
+        peaksList, _ = signal.find_peaks(self.stockValue['Close'].array,distance=10)
+        lowsList, _ = signal.find_peaks(-self.stockValue['Close'].array,distance=10)
         return peaksList,lowsList
+
+
+    def computeMomentum(self,nDays=15) :
+        Mom = []
+        for days in range(len(self.stockValue['Close'].array[nDays:])) :
+            Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
+        self.momentum = Mom 
+        print('Momentum calc completed')
 
 
     def computeMA(self,nDays=20,kind='simple') :
@@ -260,18 +293,8 @@ class Stock(object):
             EMA = [(1/nDays)*sum(self.stockValue['Close'].array[-2*nDays:-nDays])]
             K = 2/(nDays+1)
             for i in range(1,nDays) :
-                EMA.append(
-                    K* (self.stockValue['Close'].array[-nDays+i] - EMA[-1]) + EMA[-1])
+                EMA.append(K* (self.stockValue['Close'].array[-nDays+i] - EMA[-1]) + EMA[-1])
             return EMA
-
-    def computeMomentum(self,nDays=15) :
-        Mom = []
-        for days in range(len(self.stockValue['Close'].array[nDays:])) :
-            Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
-        return Mom
-
-         
-
 
 
 if __name__ == '__main__':
