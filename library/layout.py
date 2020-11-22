@@ -7,7 +7,7 @@ from .server import app
 from .dashCallbacks import updateGraph, updateStock, stockMem, globalStore
 
 
-# Dash Layout
+# Dashboard Layout
 app.layout = html.Div([
     html.H2("Prototype of an Advisoring Dashboard"),
     html.Div(className='row', children=[

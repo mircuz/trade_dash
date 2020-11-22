@@ -8,8 +8,55 @@ import pandas as pd
 
 # Class Definitions
 class Stock(object) :
+    """Class designed to collect stock info
+
+    Attributes
+    ----------
+    stockName : str
+        Name of the stock we want to investigate
+    stockTicker : yfinance object
+        Yahoo finance object which collect informations from the web
+    stockValue : DataFrame
+        DataFrame which collect the value of the stock splitted in Open, Close, Low and High
+    momentum : DataFrame
+        Dataframe representing the momentum index
+    EMA20 : Array
+        Array representing the exponential moving average of the last 20 days
+    EMA50 : Array
+        Array representing the exponential moving average of the last 50 days
+    SMA200 : Array
+        Array representing the simple moving average of the last 200 days
+    figHandler : Plotly figure
+        Handler to the figure
+
+
+    Methods
+    -------
+    updateGraphs(EMA20,EMA50,SMA200,Momentum)
+        Update Graphs rendering the class attributes
+    
+    layout_update(fig)
+        Update the figure handler to fit better the screen
+
+    computeMinMax()
+        Compute local Maximum and Minimum 
+
+    computeMomentum(nDays=15)
+        Compute Momentum
+    
+    computeMA(nDays=20,kind='simple')
+        Compute Moving Average
+    """
 
     def __init__(self,stockName) :
+        """
+        Stock Constructor
+
+        Parameters
+        ----------
+        stockName : str
+            Name of the stock to investigate
+        """
         self.stockName = stockName
         self.stockTicker = yf.Ticker(self.stockName.upper())
         self.stockValue = self.stockTicker.history(period='5y',interval='1d',group_by='ticker') 
@@ -21,6 +68,20 @@ class Stock(object) :
         
 
     def updateGraphs(self,EMA20,EMA50,SMA200,Momentum) :
+        """
+        Update the graphs embeded in figHandler with the class attributes queried
+
+        Parameters
+        ----------
+        EMA20 : bool
+            Trigger to render the attribute
+        EMA50 : bool
+            Trigger to render the attribute
+        SMA200 : bool
+            Trigger to render the attribute
+        Momentum : bool
+            Trigger to render the attribute
+        """
         if Momentum == True :
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005, row_heights=[0.45, 0.1, 0.45])
             # Embed the Momentum graph between the OHLC and minMax graph
@@ -70,9 +131,11 @@ class Stock(object) :
                 ),
             row=1, col=1)
 
+        # Plot the Momentum 
         if Momentum == True :
-            MomDays = 15
+            MomDays = len(self.momentum)
             df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[MomDays:]})
+            # Use different colors to identify momentum behaviours 
             # Momentum Raise
             fig.add_trace(
                 go.Bar(
@@ -98,8 +161,8 @@ class Stock(object) :
                     name='Momentum',
                 ),row=2, col=1)
             
-
-        # ScatterPlot
+        # Bottom plot
+        # ScatterPlot of closing values
         fig.add_trace(
             go.Scatter(
                 x=self.stockValue['Close'].index,
@@ -108,7 +171,7 @@ class Stock(object) :
                 name=self.stockName),
             row=scatterPlotRow, col=1)
         
-        # MinMax Plot
+        # Overlap local Minimun and Maximum to the bottom plot
         maxs, mins = self.computeMinMax()
         fig.add_trace(
            go.Scatter(
@@ -129,15 +192,27 @@ class Stock(object) :
                name='MIN'),
            row=scatterPlotRow, col=1)
 
-
-        fig.update(layout_xaxis_rangeslider_visible=False)
+        # Finishing touches
+        fig.update(layout_xaxis_rangeslider_visible=True)
         self.figHandler = self.layout_update(fig)
     
 
     def layout_update(self, fig) :
+        """
+        Update the figure handler to fit better the screen
+
+        Parameters
+        ----------
+        fig : Plotly figure handler
+            Figure handler on which the properties will be applied
+
+        Returns
+        -------
+        fig : Plotly figure handler
+            Figure handler on which the properties have been applied
+        """
         fig.update_layout(
                 showlegend=False,
-                # title=self.stockTicker.info['shortName'] + ' Stocks',
                 height=700,
                 margin=dict(l=80, r=80, t=20, b=10)
                 # shapes = [dict(
@@ -150,12 +225,30 @@ class Stock(object) :
 
 
     def computeMinMax(self) :
+        """
+        Compute local Maximum and Minimum 
+
+        Returns
+        -------
+        list 
+            List of the local Maximum of the stock
+        list
+            List of the local minimum of the stock 
+        """
         peaksList, _ = signal.find_peaks(self.stockValue['Close'].array,distance=10)
         lowsList, _ = signal.find_peaks(-self.stockValue['Close'].array,distance=10)
         return peaksList,lowsList
 
 
     def computeMomentum(self,nDays=15) :
+        """
+        Compute Momentum
+
+        Parameters
+        ----------
+        nDays : int, optional
+            Days used to compute the momentum, by default 15
+        """
         Mom = []
         for days in range(len(self.stockValue['Close'].array[nDays:])) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
@@ -163,6 +256,22 @@ class Stock(object) :
 
 
     def computeMA(self,nDays=20,kind='simple') :
+        """
+        Compute Moving averages
+
+        Parameters
+        ----------
+        nDays : int, optional
+            Days used to compute the moving average, by default 20
+        kind : str, optional
+            Specify if moving average is simple ('simple') or exponential ('exp'), 
+            by default 'simple'
+
+        Returns
+        -------
+        list
+            Simple/Exponential Moving average of the last nDays
+        """
         if kind == 'simple' :
             SMA = []
             for i in range(nDays) :

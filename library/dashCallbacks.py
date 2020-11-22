@@ -4,34 +4,78 @@ import dash
 from dash.dependencies import Input, Output, State
 
 
-# Setup Shared Data
+# Setup the Stock object into the cache
 stockMem = []
 
 @cache.memoize()
 def globalStore(name) :
+    """
+    Used to cache the stock
+
+    Parameters
+    ----------
+    name : str
+        Name of the stock to load
+
+    Returns
+    -------
+    Object
+        Stock object accessible across the callbacks
+    """
     global stockMem
     stockMem = Stock(name)
-    stockMem.computeMomentum()
-    stockMem.EMA20  = stockMem.computeMA(nDays=20, kind='exp')
-    stockMem.EMA50  = stockMem.computeMA(nDays=50, kind='exp')
-    stockMem.SMA200 = stockMem.computeMA(nDays=200, kind='simple')
+    if stockMem.stockValue.empty is False :
+        stockMem.computeMomentum()
+        stockMem.EMA20  = stockMem.computeMA(nDays=20, kind='exp')
+        stockMem.EMA50  = stockMem.computeMA(nDays=50, kind='exp')
+        stockMem.SMA200 = stockMem.computeMA(nDays=200, kind='simple')
     return stockMem
 
 
 # Callbacks
 @app.callback(
-    [Output('graphTitle','children')],
-    Input('stockName','value')
+    [Output('graphTitle','children'),
+     Output('noDataFound', 'displayed')],
+     Input('stockName','value')
 )
 def updateStock(stockName) :
-    if len(stockName)>=4:
+    """
+    Takes the stock name queried by the user and use it to
+    generate a new stock object 
+
+    Parameters
+    ----------
+    stockName : str
+        Name of the stock to investigate
+
+    Returns
+    -------
+    list
+        The first entry of the list represent the name of the stock
+        which will be used as new graph title
+        The second entry is used to trigger the noDataFound popup
+    """
+    if len(stockName)>0:
         globalStore(stockName)
-        return [stockMem.stockTicker.info['shortName'] + ' Stocks']
+        if stockMem.stockValue.empty is False :
+            return [
+                    [stockMem.stockTicker.info['shortName'] + ' Stocks'],
+                    False
+                ]
+        else :
+            return [
+                    dash.no_update,
+                    True
+                ]
+    else :
+        return [
+                dash.no_update,
+                True
+            ]
 
 
 @app.callback(
-    [Output('stockGraph','figure'),
-     Output('noDataFound', 'displayed')],
+    [Output('stockGraph','figure')],
     [Input('graphTitle','children'),
      Input('EMA20Toggle','on'),
      Input('EMA50Toggle','on'),
@@ -39,14 +83,30 @@ def updateStock(stockName) :
      Input('MomentumToggle','on')]
     )
 def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum) :
+    """
+    This routine is used to render the graph and act as interface 
+    between the dashboard and the Stock class method updateGraphs 
+
+    Parameters
+    ----------
+    stockName : str
+        Trigger used to call this routine after updateStock(stockName) 
+    EMA20 : bool
+        See Stock.updateGraphs
+    EMA50 : bool
+        See Stock.updateGraphs
+    SMA200 : bool
+        See Stock.updateGraphs
+    Momentum : bool
+        See Stock.updateGraphs
+
+    Returns
+    -------
+    Plotly figure handler
+        Figure which will be rendered
+    """
     if stockMem.stockValue.empty is False :
         stockMem.updateGraphs(EMA20,EMA50,SMA200,Momentum)
-        return [
-            stockMem.figHandler,
-            False
-                ]
+        return [stockMem.figHandler]
     else :
-        return [
-            dash.no_update,
-            True
-        ]
+        return [dash.no_update]

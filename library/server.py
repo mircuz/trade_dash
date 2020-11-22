@@ -13,5 +13,7 @@ CACHE_CONFIG = {
     'CACHE_TYPE': 'simple',
     'CACHE_DEFAULT_TIMEOUT' : 300
 }
+
+# Init cache
 cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
