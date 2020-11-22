@@ -133,7 +133,7 @@ class Stock(object) :
 
         # Plot the Momentum 
         if Momentum == True :
-            MomDays = len(self.momentum)
+            MomDays = len(self.stockValue['Close']) - len(self.momentum)
             df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[MomDays:]})
             # Use different colors to identify momentum behaviours 
             # Momentum Raise
@@ -178,7 +178,7 @@ class Stock(object) :
                mode="markers",
                x=self.stockValue['Close'][maxs].index,
                y=self.stockValue['Close'].array[maxs], 
-               marker_symbol=141, marker_color='rgb(251,180,174)', marker_line_width=2,
+               marker_symbol=6, marker_color='rgb(251,180,174)', marker_line_width=2,
                showlegend=False,
                name='MAX'),
             row=scatterPlotRow, col=1)
@@ -187,13 +187,13 @@ class Stock(object) :
                mode="markers",
                x=self.stockValue['Close'][mins].index,
                y=self.stockValue['Close'].array[mins], 
-               marker_symbol=141, marker_color='#00CC96', marker_line_width=2,
+               marker_symbol=5, marker_color='#00CC96', marker_line_width=1,
                showlegend=False,
                name='MIN'),
            row=scatterPlotRow, col=1)
 
         # Finishing touches
-        fig.update(layout_xaxis_rangeslider_visible=True)
+        fig.update(layout_xaxis_rangeslider_visible=False)
         self.figHandler = self.layout_update(fig)
     
 
@@ -252,7 +252,7 @@ class Stock(object) :
         Mom = []
         for days in range(len(self.stockValue['Close'].array[nDays:])) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
-        self.momentum = Mom 
+        self.momentum = Mom[16:]
 
 
     def computeMA(self,nDays=20,kind='simple') :
