@@ -173,7 +173,42 @@ class Stock(object) :
                 marker_color='black',
                 name=self.stockName),
             row=scatterPlotRow, col=1)
-        
+
+        # Forecast
+        if Forecast == True :
+            predictions_time, predictions, mse = train_model(self)
+            # Line
+            fig.add_trace(
+                go.Scatter(
+                    mode="markers",
+                    x=predictions_time,
+                    y=predictions,
+                    name=self.stockName + ' Forecast',
+                    marker_color='lightcoral',
+                    marker_line_width=1,
+                    marker_symbol=41),
+                row=scatterPlotRow, col=1)
+            # Upper threshold of confidence
+            fig.add_trace(
+                go.Scatter(
+                    mode=None,
+                    x=predictions_time,
+                    y=predictions+mse,
+                    fill=None,
+                    marker_color='lightcoral',
+                    name=self.stockName+' Forecast'),
+                row=scatterPlotRow, col=1)
+            # Lower threshold of confidence
+            fig.add_trace(
+                go.Scatter(
+                    mode=None,
+                    x=predictions_time,
+                    y=predictions-mse,
+                    fill='tonexty',
+                    marker_color='lightcoral',
+                    name=self.stockName+' Forecast'),
+                row=scatterPlotRow, col=1)
+
         # Overlap local Minimun and Maximum to the bottom plot
         maxs, mins = self.computeMinMax()
         fig.add_trace(
@@ -194,19 +229,6 @@ class Stock(object) :
                showlegend=False,
                name='MIN'),
            row=scatterPlotRow, col=1)
-
-        # If Forecaster is on
-        if Forecast == True :
-            predictions_time, predictions = train_model(self)
-            fig.add_trace(
-                go.Scatter(
-                    mode="markers",
-                    x=predictions_time,
-                    y=predictions,
-                    marker_color='turquoise',
-                    name='Forecast'),
-                row=scatterPlotRow, col=1)
-
 
         # Finishing touches
         fig.update(layout_xaxis_rangeslider_visible=False)
