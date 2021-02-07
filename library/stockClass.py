@@ -4,6 +4,7 @@ import yfinance as yf
 import scipy.signal as signal
 import numpy as np
 import pandas as pd
+from .forecast import train_model
 
 
 # Class Definitions
@@ -67,7 +68,7 @@ class Stock(object) :
         self.figHandler = []
         
 
-    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum) :
+    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum,Forecast) :
         """
         Update the graphs embeded in figHandler with the class attributes queried
 
@@ -80,6 +81,8 @@ class Stock(object) :
         SMA200 : bool
             Trigger to render the attribute
         Momentum : bool
+            Trigger to render the attribute
+        Forecast : bool
             Trigger to render the attribute
         """
         if Momentum == True :
@@ -191,6 +194,19 @@ class Stock(object) :
                showlegend=False,
                name='MIN'),
            row=scatterPlotRow, col=1)
+
+        # If Forecaster is on
+        if Forecast == True :
+            predictions_time, predictions = train_model(self)
+            fig.add_trace(
+                go.Scatter(
+                    mode="markers",
+                    x=predictions_time,
+                    y=predictions,
+                    marker_color='turquoise',
+                    name='Forecast'),
+                row=scatterPlotRow, col=1)
+
 
         # Finishing touches
         fig.update(layout_xaxis_rangeslider_visible=False)

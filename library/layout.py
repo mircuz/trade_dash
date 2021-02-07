@@ -46,6 +46,13 @@ app.layout = html.Div([
                 on=False,
                 color='#C0C0C0',
             ),
+            daq.BooleanSwitch(
+                label='Forecast',
+                className='one columns',
+                id='ForecastToggle',
+                on=False,
+                color='#111111',
+            ),
         ]
     ),
     html.Br(),
