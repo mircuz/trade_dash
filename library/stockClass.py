@@ -4,7 +4,7 @@ import yfinance as yf
 import scipy.signal as signal
 import numpy as np
 import pandas as pd
-from .forecast import train_model
+from .forecast import ARIMA, Prophet
 
 
 # Class Definitions
@@ -176,14 +176,14 @@ class Stock(object) :
 
         # Forecast
         if Forecast == True :
-            predictions_time, predictions, mse = train_model(self)
+            predictions_time, predictions, mse = ARIMA(self)
             # Line
             fig.add_trace(
                 go.Scatter(
                     mode="markers",
                     x=predictions_time,
                     y=predictions,
-                    name=self.stockName + ' Forecast',
+                    name=self.stockName + ' ARIMA',
                     marker_color='lightcoral',
                     marker_line_width=1,
                     marker_symbol=41),
@@ -196,7 +196,7 @@ class Stock(object) :
                     y=predictions+mse,
                     fill=None,
                     marker_color='lightcoral',
-                    name=self.stockName+' Forecast'),
+                    name=self.stockName+' ARIMA'),
                 row=scatterPlotRow, col=1)
             # Lower threshold of confidence
             fig.add_trace(
@@ -206,7 +206,7 @@ class Stock(object) :
                     y=predictions-mse,
                     fill='tonexty',
                     marker_color='lightcoral',
-                    name=self.stockName+' Forecast'),
+                    name=self.stockName+' ARIMA'),
                 row=scatterPlotRow, col=1)
 
         # Overlap local Minimun and Maximum to the bottom plot
