@@ -1,25 +1,51 @@
-import pmdarima as pm
-from pmdarima.model_selection import train_test_split
-from pmdarima.pipeline import Pipeline
-from pmdarima.preprocessing import BoxCoxEndogTransformer
-from sklearn.metrics import mean_squared_error
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.arima.model import ARIMA
+from pmdarima.arima import auto_arima
+from matplotlib import pyplot as plt 
+import numpy as np
+import pandas as pd
 
 
-def train_model(stock) :
-     # Import the Stocks and evaluate the structure for the training and forecast
-     train, test = train_test_split(stock.stockValue['Close'], train_size=int(len(stock.stockValue)*0.90))
+def decompose(stock) :
+     result = seasonal_decompose(stock.stockValue['Close'], model='multiplicative', period=30)
+     return result
 
-     # ARIMA implementation
-     pipeline = Pipeline([
-     ('boxcox', BoxCoxEndogTransformer(lmbda2=1e-6)),  # lmbda2 avoids negative values
-     ('arima', pm.AutoARIMA(seasonal=True, m=12,
-                           suppress_warnings=True,
-                           trace=True))
-     ])
-     pipeline.fit(train)
-     prediction = pipeline.predict(int(len(stock.stockValue)*0.1))
-    
-     MSE_error = 5 #mean_squared_error(test, prediction)
-     print('Testing Mean Squared Error is {}'.format(MSE_error))
-     test_set_range = stock.stockValue[int(len(stock.stockValue)*0.9):int(len(stock.stockValue)*1.0)].index
-     return test_set_range, prediction, MSE_error
+
+def AutoARIMA(stock) :
+     # Seasonality check
+     decomposed_df = decompose(stock)             # TODO create new tab to plot the backend analysis
+
+     # The training will be carried out in logarithmic domain, to reduce data fluctuations and retrieve the best pqd triplet
+     dfClean = np.log(stock.stockValue['Close'])
+     # Split in train data and test data
+     train_data, test_data = dfClean[3:int(len(dfClean)*0.9)], dfClean[int(len(dfClean)*0.9):]
+
+     # AutoARIMA pdq identification
+     model_autoARIMA = auto_arima(train_data, start_p=0, start_q=0,
+                      test='adf',       # use adftest to find optimal 'd'
+                      max_p=7, max_q=7, # maximum p and q
+                      m=1,              # frequency of series
+                      d=None,           # let model determine 'd'
+                      seasonal=False,   # No Seasonality
+                      start_P=0, 
+                      D=0, 
+                      trace=True,
+                      error_action='ignore',  
+                      suppress_warnings=True, 
+                      stepwise=True)
+     print(model_autoARIMA.summary())
+     
+     # Train ARIMA Model
+     model = ARIMA(train_data, order=model_autoARIMA.order)  
+     fitted = model.fit()  
+
+     # Forecast
+     forecastedSteps = 30
+     model_predictions = fitted.get_forecast(steps=forecastedSteps)  # 95% confidence
+     forecasted_value = model_predictions.predicted_mean
+     forecasted_series = pd.Series(forecasted_value.values, index=test_data.index[:forecastedSteps])
+     confidence = model_predictions.conf_int(alpha=0.05)
+     lower_series = pd.Series(confidence['lower Close'].values, index=test_data.index[:forecastedSteps])
+     upper_series = pd.Series(confidence['upper Close'].values, index=test_data.index[:forecastedSteps])
+
+     return forecasted_series, lower_series, upper_series

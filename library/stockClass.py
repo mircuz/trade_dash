@@ -4,7 +4,7 @@ import yfinance as yf
 import scipy.signal as signal
 import numpy as np
 import pandas as pd
-from .forecast import train_model
+from .forecast import AutoARIMA
 
 
 # Class Definitions
@@ -176,12 +176,12 @@ class Stock(object) :
 
         # Forecast
         if Forecast == True :
-            predictions_time, predictions, mse = train_model(self)
+            forecasted, lowerConfidence, upperConfidence = AutoARIMA(self)
             # Line
             fig.add_trace(
                 go.Scatter(
                     mode="markers",
-                    x=predictions_time,
+                    x=forecasted['Date'],
                     y=predictions,
                     name=self.stockName + ' Forecast',
                     marker_color='lightcoral',
