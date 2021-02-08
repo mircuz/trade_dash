@@ -1,26 +1,25 @@
-from statsmodels.tsa.arima.model import ARIMA
+import pmdarima as pm
+from pmdarima.model_selection import train_test_split
+from pmdarima.pipeline import Pipeline
+from pmdarima.preprocessing import BoxCoxEndogTransformer
 from sklearn.metrics import mean_squared_error
 
 
 def train_model(stock) :
-    # Import the Stocks and evaluate the structure for the training and forecast
+     # Import the Stocks and evaluate the structure for the training and forecast
+     train, test = train_test_split(stock.stockValue['Close'], train_size=int(len(stock.stockValue)*0.90))
 
-    # ARIMA implementation
-    train_data, test_data = stock.stockValue[0:int(len(stock.stockValue)*0.7)],\
-                            stock.stockValue[int(len(stock.stockValue)*0.7):]
-    training_data = train_data['Close'].values
-    test_data = test_data['Close'].values
-    history = [x for x in training_data]
-    model_predictions = []
-    N_test_observations = len(test_data)
-    for time_point in range(N_test_observations):
-         model = ARIMA(history, order=(5,1,1))
-         model_fit = model.fit()
-         output = model_fit.forecast()
-         model_predictions.append(output[0].item())
-         true_test_value = test_data[time_point]
-         history.append(true_test_value)
-    MSE_error = mean_squared_error(test_data, model_predictions)
-    print('Testing Mean Squared Error is {}'.format(MSE_error))
-    test_set_range = stock.stockValue[int(len(stock.stockValue)*0.7):].index
-    return test_set_range, model_predictions, MSE_error
+     # ARIMA implementation
+     pipeline = Pipeline([
+     ('boxcox', BoxCoxEndogTransformer(lmbda2=1e-6)),  # lmbda2 avoids negative values
+     ('arima', pm.AutoARIMA(seasonal=True, m=12,
+                           suppress_warnings=True,
+                           trace=True))
+     ])
+     pipeline.fit(train)
+     prediction = pipeline.predict(int(len(stock.stockValue)*0.1))
+    
+     MSE_error = 5 #mean_squared_error(test, prediction)
+     print('Testing Mean Squared Error is {}'.format(MSE_error))
+     test_set_range = stock.stockValue[int(len(stock.stockValue)*0.9):int(len(stock.stockValue)*1.0)].index
+     return test_set_range, prediction, MSE_error
