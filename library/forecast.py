@@ -4,6 +4,7 @@ from pmdarima.arima import auto_arima
 from matplotlib import pyplot as plt 
 import numpy as np
 import pandas as pd
+from fbprophet import Prophet
 
 
 def decompose(stock) :
@@ -17,11 +18,12 @@ def AutoARIMA(stock) :
 
      # The training will be carried out in logarithmic domain, to reduce data fluctuations and retrieve the best pqd triplet
      dfClean = np.log(stock.stockValue['Close'])
+     
      # Split in train data and test data
-     train_data, test_data = dfClean[3:int(len(dfClean)*0.9)], dfClean[int(len(dfClean)*0.9):]
+     train_data, test_data = dfClean[10:int(len(dfClean)*0.98)], dfClean[int(len(dfClean)*0.98):]
 
      # AutoARIMA pdq identification
-     model_autoARIMA = auto_arima(train_data, start_p=0, start_q=0,
+     model_autoARIMA = auto_arima(train_data, start_p=5, start_q=5,
                       test='adf',       # use adftest to find optimal 'd'
                       max_p=7, max_q=7, # maximum p and q
                       m=1,              # frequency of series
@@ -40,12 +42,22 @@ def AutoARIMA(stock) :
      fitted = model.fit()  
 
      # Forecast
-     forecastedSteps = 30
-     model_predictions = fitted.get_forecast(steps=forecastedSteps)  # 95% confidence
+     forecastedSteps = 15
+     model_predictions = fitted.get_forecast(steps=forecastedSteps)  
      forecasted_value = model_predictions.predicted_mean
      forecasted_series = pd.Series(forecasted_value.values, index=test_data.index[:forecastedSteps])
-     confidence = model_predictions.conf_int(alpha=0.05)
+     confidence = model_predictions.conf_int(alpha=0.15) # 85% confidence
      lower_series = pd.Series(confidence['lower Close'].values, index=test_data.index[:forecastedSteps])
      upper_series = pd.Series(confidence['upper Close'].values, index=test_data.index[:forecastedSteps])
 
+     print('MAPE: {:.2%}'.format(np.mean(np.abs(forecasted_value.values - test_data[:forecastedSteps].values)/np.abs(test_data[:forecastedSteps].values))))
      return forecasted_series, lower_series, upper_series
+
+
+def prophet(stock) :
+     m = Prophet(daily_seasonality = False) # the Prophet class (model)
+     m.fit(pd.DataFrame({'y': np.log(stock.stockValue['Close']), 'ds': stock.stockValue['Close'].index}))
+
+     future = m.make_future_dataframe(periods=15) #we need to specify the number of days in future
+     prediction = m.predict(future)
+     return prediction

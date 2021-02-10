@@ -49,9 +49,16 @@ app.layout = html.Div([
             daq.BooleanSwitch(
                 label='ARIMA',
                 className='one columns',
-                id='ForecastToggle',
+                id='ARIMAToggle',
                 on=False,
                 color='lightcoral',
+            ),
+            daq.BooleanSwitch(
+                label='Prophet',
+                className='one columns',
+                id='ProphetToggle',
+                on=False,
+                color='lightblue',
             ),
         ]
     ),

@@ -4,7 +4,7 @@ import yfinance as yf
 import scipy.signal as signal
 import numpy as np
 import pandas as pd
-from .forecast import AutoARIMA
+from .forecast import AutoARIMA, prophet
 
 
 # Class Definitions
@@ -60,7 +60,7 @@ class Stock(object) :
         """
         self.stockName = stockName
         self.stockTicker = yf.Ticker(self.stockName.upper())
-        self.stockValue = self.stockTicker.history(period='5y',interval='1d',group_by='ticker') 
+        self.stockValue = self.stockTicker.history(period='max',interval='1d',group_by='ticker') 
         self.momentum   = []
         self.EMA20      = []
         self.EMA50      = []
@@ -68,7 +68,7 @@ class Stock(object) :
         self.figHandler = []
         
 
-    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum,Forecast) :
+    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum,ARIMA,Prophet) :
         """
         Update the graphs embeded in figHandler with the class attributes queried
 
@@ -82,7 +82,9 @@ class Stock(object) :
             Trigger to render the attribute
         Momentum : bool
             Trigger to render the attribute
-        Forecast : bool
+        ARIMA : bool
+            Trigger to render the attribute
+        Prophet : bool
             Trigger to render the attribute
         """
         if Momentum == True :
@@ -175,25 +177,24 @@ class Stock(object) :
             row=scatterPlotRow, col=1)
 
         # Forecast
-        if Forecast == True :
+        if ARIMA == True :
             forecasted, lowerConfidence, upperConfidence = AutoARIMA(self)
             # Line
             fig.add_trace(
                 go.Scatter(
                     mode="markers",
-                    x=forecasted['Date'],
-                    y=predictions,
+                    x=forecasted.index,
+                    y=np.exp(forecasted.values),
                     name=self.stockName + ' Forecast',
                     marker_color='lightcoral',
-                    marker_line_width=1,
-                    marker_symbol=41),
+                    marker_line_width=1),
                 row=scatterPlotRow, col=1)
             # Upper threshold of confidence
             fig.add_trace(
                 go.Scatter(
                     mode=None,
-                    x=predictions_time,
-                    y=predictions+mse,
+                    x=upperConfidence.index,
+                    y=np.exp(upperConfidence.values),
                     fill=None,
                     marker_color='lightcoral',
                     name=self.stockName+' Forecast'),
@@ -202,10 +203,44 @@ class Stock(object) :
             fig.add_trace(
                 go.Scatter(
                     mode=None,
-                    x=predictions_time,
-                    y=predictions-mse,
+                    x=lowerConfidence.index,
+                    y=np.exp(lowerConfidence.values),
                     fill='tonexty',
                     marker_color='lightcoral',
+                    name=self.stockName+' Forecast'),
+                row=scatterPlotRow, col=1)
+
+        # Forecast
+        if Prophet == True :
+            prophetForecast = prophet(self)
+            # Line
+            fig.add_trace(
+                go.Scatter(
+                    mode="markers",
+                    x=prophetForecast.ds,
+                    y=np.exp(prophetForecast.yhat),
+                    name=self.stockName + ' Prophet',
+                    marker_color='blue',
+                    marker_line_width=1),
+                row=scatterPlotRow, col=1)
+            # Upper threshold of confidence
+            fig.add_trace(
+                go.Scatter(
+                    mode=None,
+                    x=prophetForecast.ds[-90:],
+                    y=np.exp(prophetForecast.yhat_upper[-90:]),
+                    fill=None,
+                    marker_color='lightblue',
+                    name=self.stockName+' Forecast'),
+                row=scatterPlotRow, col=1)
+            # Lower threshold of confidence
+            fig.add_trace(
+                go.Scatter(
+                    mode=None,
+                    x=prophetForecast.ds[-90:],
+                    y=np.exp(prophetForecast.yhat_lower[-90:]),
+                    fill='tonexty',
+                    marker_color='lightblue',
                     name=self.stockName+' Forecast'),
                 row=scatterPlotRow, col=1)
 
@@ -214,8 +249,8 @@ class Stock(object) :
         fig.add_trace(
            go.Scatter(
                mode="markers",
-               x=self.stockValue['Close'][maxs].index,
-               y=self.stockValue['Close'].array[maxs], 
+               x=self.stockValue['Close'][maxs[-30:]].index,
+               y=self.stockValue['Close'].array[maxs[-30:]], 
                marker_symbol=6, marker_color='rgb(251,180,174)', marker_line_width=2,
                showlegend=False,
                name='MAX'),
@@ -223,8 +258,8 @@ class Stock(object) :
         fig.add_trace(
            go.Scatter(
                mode="markers",
-               x=self.stockValue['Close'][mins].index,
-               y=self.stockValue['Close'].array[mins], 
+               x=self.stockValue['Close'][mins[-30:]].index,
+               y=self.stockValue['Close'].array[mins[-30:]], 
                marker_symbol=5, marker_color='#00CC96', marker_line_width=1,
                showlegend=False,
                name='MIN'),
@@ -264,7 +299,7 @@ class Stock(object) :
 
     def computeMinMax(self) :
         """
-        Compute local Maximum and Minimum 
+        Compute local Maximum and Minimum in the last 90 days
 
         Returns
         -------
@@ -273,8 +308,8 @@ class Stock(object) :
         list
             List of the local minimum of the stock 
         """
-        peaksList, _ = signal.find_peaks(self.stockValue['Close'].array,distance=10)
-        lowsList, _ = signal.find_peaks(-self.stockValue['Close'].array,distance=10)
+        peaksList, _ = signal.find_peaks(self.stockValue['Close'].values,distance=10)
+        lowsList, _ = signal.find_peaks(-self.stockValue['Close'].values,distance=10)
         return peaksList,lowsList
 
 
