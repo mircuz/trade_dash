@@ -109,7 +109,7 @@ class Stock(object) :
         if SMA200 == True :
             fig.add_trace(
                 go.Scatter(
-                    x=self.stockValue['Close'][-200:].index,
+                    x=self.stockValue['Close'][-len(self.SMA200):].index,
                     y=self.SMA200,
                     marker_color='#FF1493',
                     name='SMA200',
@@ -119,7 +119,7 @@ class Stock(object) :
         if EMA50 == True :
             fig.add_trace(
                 go.Scatter(
-                    x=self.stockValue['Close'][-50:].index,
+                    x=self.stockValue['Close'][-len(self.EMA50):].index,
                     y=self.EMA50,
                     marker_color='#9400D3',
                     name='EMA50',
@@ -129,7 +129,7 @@ class Stock(object) :
         if EMA20 == True :
             fig.add_trace(
                 go.Scatter(
-                    x=self.stockValue['Close'][-20:].index,
+                    x=self.stockValue['Close'][-len(self.EMA20):].index,
                     y=self.EMA20,
                     marker_color='#4169E1',
                     name='EMA20',
@@ -308,8 +308,9 @@ class Stock(object) :
         list
             List of the local minimum of the stock 
         """
-        peaksList, _ = signal.find_peaks(self.stockValue['Close'].values,distance=10)
-        lowsList, _ = signal.find_peaks(-self.stockValue['Close'].values,distance=10)
+        # Reverse list to have the peaks tackled on the latest values instead of historical ones
+        peaksList, _ = signal.find_peaks(self.stockValue['Close'].values[::-1],distance=10)
+        lowsList, _ = signal.find_peaks(-self.stockValue['Close'].values[::-1],distance=10)
         return peaksList,lowsList
 
 
@@ -345,15 +346,31 @@ class Stock(object) :
         list
             Simple/Exponential Moving average of the last nDays
         """
+        limit = 360     # Number of backward steps
         if kind == 'simple' :
             SMA = []
-            for i in range(nDays) :
+            for i in range(limit) :
                 SMA.append((1/nDays)*sum(self.stockValue['Close'].array[np.arange(-i-nDays,-i)]))
             SMA.reverse()
             return SMA
         if kind == 'exp' :
-            EMA = [(1/nDays)*sum(self.stockValue['Close'].array[-2*nDays:-nDays])]
+            EMA = [(1/nDays)*sum(self.stockValue['Close'].array[-limit:-limit+nDays])]
             K = 2/(nDays+1)
-            for i in range(1,nDays) :
-                EMA.append(K* (self.stockValue['Close'].array[-nDays+i] - EMA[-1]) + EMA[-1])
+            for i in range(1,limit) :
+                EMA.append(K* (self.stockValue['Close'].array[-limit-nDays+i] - EMA[i-1]) + EMA[i-1])
             return EMA
+
+
+    def trend_identification_minMax(self) :
+        #TBD
+        pass 
+
+
+    def MA_semaphore(self) :
+        # Delta 20 vs 50 positive => ascending trend
+        delta_20_50 =  (self.EMA20 - self.EMA50[-len(self.EMA20):]) > 0
+        # Delta 50 vs 200 positive => ascending trend
+        delta_50_200 = (self.EMA50 - self.SMA200[-len(self.EMA50):]) > 0
+        
+        return delta_20_50, delta_50_200
+    
