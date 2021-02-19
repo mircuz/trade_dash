@@ -5,6 +5,7 @@ import scipy.signal as signal
 import numpy as np
 import pandas as pd
 from .forecast import AutoARIMA, prophet
+from itertools import compress
 
 
 # Class Definitions
@@ -106,6 +107,7 @@ class Stock(object) :
             row=1, col=1)
 
         # Optional Moving Average Plots
+        trigger_20_50 = 0;  trigger_50_200 = 0  
         if SMA200 == True :
             fig.add_trace(
                 go.Scatter(
@@ -115,6 +117,7 @@ class Stock(object) :
                     name='SMA200',
                 ),
             row=1, col=1)
+            trigger_50_200 += 0.5
 
         if EMA50 == True :
             fig.add_trace(
@@ -125,6 +128,7 @@ class Stock(object) :
                     name='EMA50',
                 ),
             row=1, col=1)
+            trigger_20_50 += 0.5;   trigger_50_200 += 0.5
         
         if EMA20 == True :
             fig.add_trace(
@@ -135,6 +139,36 @@ class Stock(object) :
                     name='EMA20',
                 ),
             row=1, col=1)
+            trigger_20_50 += 0.5
+
+        if trigger_20_50 == 1 :
+            enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_semaphore(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA20):].index) 
+
+            fig.add_trace(
+                go.Scatter(
+                    x=enterDay_20_50,
+                    y=self.stockValue['Close'][enterDay_20_50],
+                    mode="markers",
+                    marker_color='blue',
+                    marker_symbol=108,
+                    name='Enter MA',
+                    marker_line_width=4
+                ),
+            row=1, col=1)
+            fig.add_trace(
+                go.Scatter(
+                    x=exitDay_20_50,
+                    y=self.stockValue['Close'][exitDay_20_50],
+                    mode="markers",
+                    marker_color='#AF0038',
+                    marker_symbol=107,
+                    name='Exit MA',
+                    marker_line_width=4
+                ),
+            row=1, col=1)
+        if trigger_50_200 == 1 :
+            enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_semaphore(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.EMA50):].index) 
+        
 
         # Plot the Momentum 
         if Momentum == True :
@@ -366,11 +400,37 @@ class Stock(object) :
         pass 
 
 
-    def MA_semaphore(self) :
-        # Delta 20 vs 50 positive => ascending trend
-        delta_20_50 =  (self.EMA20 - self.EMA50[-len(self.EMA20):]) > 0
-        # Delta 50 vs 200 positive => ascending trend
-        delta_50_200 = (self.EMA50 - self.SMA200[-len(self.EMA50):]) > 0
+    def MA_semaphore(self, first, second, timeHistory) :
+        # Delta first vs second positive => ascending trend
+        zipped = zip(first, second[-len(first):])
+        difference = [];    comp = []
+        # Compute difference between two indexees
+        for i, j in zipped :
+            difference.append(i-j) 
+        # Of the difference takes only the positive indexes
+        for i in difference :
+            comp.append(i>0)
+        # Timestamp of the positive differences
+        upsDate = timeHistory[comp]
+        # Optional deltas between values to get better looking viz
+        positiveDiffs = list(compress(difference, comp))
+        # Compute best entry and exit from the market
+        enterDay = [];  exitDay = []
+        while comp != [] :
+            # Compute the first day in which we had positive delta
+            day = np.argwhere(np.array(comp)==True)
+            if day.shape[0] == 0 : 
+                break
+            enterDay.append(timeHistory[day.min()])
+            # Reduce the size of the array by discarding values before the enterDay
+            comp = comp[day.min():];  timeHistory = timeHistory[day.min():]
+
+            # Compute the first day in which we had negative delta
+            day = np.argwhere(np.array(comp)==False)
+            if day.shape[0] == 0 : 
+                break
+            exitDay.append(timeHistory[day.min()])
+            # Reduce the size of the array by discarding values before the exitDay
+            comp = comp[day.min():];  timeHistory = timeHistory[day.min():]
         
-        return delta_20_50, delta_50_200
-    
+        return enterDay, exitDay, upsDate, positiveDiffs
