@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import plotly.express as px
 from plotly.subplots import make_subplots
 import yfinance as yf
 import scipy.signal as signal
@@ -89,7 +90,8 @@ class Stock(object) :
             Trigger to render the attribute
         """
         if Momentum == True :
-            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005, row_heights=[0.45, 0.1, 0.45])
+            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005, row_heights=[0.45, 0.1, 0.45], 
+                specs=[[{"secondary_y": False}], [{"secondary_y": True}], [{"secondary_y": False}]])
             # Embed the Momentum graph between the OHLC and minMax graph
             scatterPlotRow = 3
         else :
@@ -152,7 +154,7 @@ class Stock(object) :
                     marker_color='blue',
                     marker_symbol=108,
                     name='Enter MA',
-                    marker_line_width=4
+                    marker_line_width=8
                 ),
             row=1, col=1)
             fig.add_trace(
@@ -163,7 +165,7 @@ class Stock(object) :
                     marker_color='#AF0038',
                     marker_symbol=107,
                     name='Exit MA',
-                    marker_line_width=4
+                    marker_line_width=8
                 ),
             row=1, col=1)
         if trigger_50_200 == 1 :
@@ -175,30 +177,42 @@ class Stock(object) :
             MomDays = len(self.stockValue['Close']) - len(self.momentum)
             df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[MomDays:]})
             # Use different colors to identify momentum behaviours 
-            # Momentum Raise
+            # Momentum
             fig.add_trace(
-                go.Bar(
-                    x=df.where(df['mom'] > 10).dropna()['date'],
-                    y=df.where(df['mom'] > 10).dropna()['mom'],
-                    marker_color='turquoise',
+                go.Scatter(
+                    x=df['date'],
+                    y=df['mom'],
+                    marker=dict(
+                        # cmax=max(df['mom']),
+                        # cmid=0,
+                        # cmin=min(df['mom']),
+                        color='darkgoldenrod',
+                        size=1,
+                        autocolorscale=True
+                    ),
                     name='Momentum',
-                ),row=2, col=1)
-            # Momentum Down
+                ),row=2, col=1,
+                secondary_y=False)
+
+            # Zero line for Momentum
+            fig.add_shape(
+                type='line',
+                x0=self.stockValue['Close'].index[0], x1=self.stockValue['Close'].index[-1], 
+                y0=0, y1=0, xref='x', yref='paper',
+                line_width=2,
+                row=2, col=1,
+                secondary_y=False
+            )
+
+            # Volume on secondary axis
             fig.add_trace(
                 go.Bar(
-                    x=df.where(df['mom'] < -10).dropna()['date'],
-                    y=df.where(df['mom'] < -10).dropna()['mom'],
-                    marker_color='purple',
-                    name='Momentum',
-                ),row=2, col=1)
-            # Momentum Steady
-            fig.add_trace(
-                go.Bar(
-                    x=df.where((df['mom'] < 10) & (df['mom'] > -10)).dropna()['date'],
-                    y=df.where((df['mom'] < 10) & (df['mom'] > -10)).dropna()['mom'],
+                    x=self.stockValue['Close'].index,
+                    y=self.stockValue['Volume'].values /max(self.stockValue['Volume']),
                     marker_color='silver',
-                    name='Momentum',
-                ),row=2, col=1)
+                    name='Volume',
+                ),row=2, col=1,
+                secondary_y=True)
             
         # Bottom plot
         # ScatterPlot of closing values
@@ -322,11 +336,6 @@ class Stock(object) :
                 showlegend=False,
                 height=700,
                 margin=dict(l=80, r=80, t=20, b=10)
-                # shapes = [dict(
-                #             x0='2020-08-09', x1='2020-08-09', 
-                #             y0=0, y1=1, xref='x', yref='paper',
-                #             line_width=2
-                #         )],
             )
         return fig
 
@@ -348,19 +357,19 @@ class Stock(object) :
         return peaksList,lowsList
 
 
-    def computeMomentum(self,nDays=15) :
+    def computeMomentum(self,nDays=14) :
         """
         Compute Momentum
 
         Parameters
         ----------
         nDays : int, optional
-            Days used to compute the momentum, by default 15
+            Days used to compute the momentum, by default 14
         """
         Mom = []
         for days in range(len(self.stockValue['Close'].array[nDays:])) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
-        self.momentum = Mom[16:]
+        self.momentum = Mom[nDays+1:]
 
 
     def computeMA(self,nDays=20,kind='simple') :
