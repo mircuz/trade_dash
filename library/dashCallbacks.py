@@ -58,10 +58,16 @@ def updateStock(stockName) :
     if len(stockName)>0:
         globalStore(stockName)
         if stockMem.stockValue.empty is False :
-            return [
-                    [stockMem.stockTicker.info['shortName'] + ' Stocks'],
-                    False
-                ]
+            try : 
+                return [
+                        [stockMem.stockTicker.info['shortName'] + ' Stocks'],
+                        False
+                    ]
+            except :
+                return [
+                        [stockMem.stockTicker.ticker + ' Stocks'],
+                        False
+                    ]
         else :
             return [
                     dash.no_update,

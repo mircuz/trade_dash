@@ -174,35 +174,7 @@ class Stock(object) :
 
         # Plot the Momentum 
         if Momentum == True :
-            MomDays = len(self.stockValue['Close']) - len(self.momentum)
-            df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[MomDays:]})
-            # Use different colors to identify momentum behaviours 
-            # Momentum
-            fig.add_trace(
-                go.Scatter(
-                    x=df['date'],
-                    y=df['mom'],
-                    marker=dict(
-                        # cmax=max(df['mom']),
-                        # cmid=0,
-                        # cmin=min(df['mom']),
-                        color='darkgoldenrod',
-                        size=1,
-                        autocolorscale=True
-                    ),
-                    name='Momentum',
-                ),row=2, col=1,
-                secondary_y=False)
-
-            # Zero line for Momentum
-            fig.add_shape(
-                type='line',
-                x0=self.stockValue['Close'].index[0], x1=self.stockValue['Close'].index[-1], 
-                y0=0, y1=0, xref='x', yref='paper',
-                line_width=2,
-                row=2, col=1,
-                secondary_y=False
-            )
+            df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[14:]})
 
             # Volume on secondary axis
             fig.add_trace(
@@ -213,6 +185,24 @@ class Stock(object) :
                     name='Volume',
                 ),row=2, col=1,
                 secondary_y=True)
+            fig['layout']['yaxis3'].update(range=[-0.6, 0.6])
+            
+            # Momentum
+            fig.add_trace(
+                go.Scatter(
+                    x=df['date'],
+                    y=df['mom'],
+                    marker=dict(
+                        # cmax=max(df['mom']),
+                        # cmid=0,
+                        # cmin=min(df['mom']),
+                        color='gray',
+                        size=1,
+                        autocolorscale=True
+                    ),
+                    name='Momentum',
+                ),row=2, col=1,
+                secondary_y=False)
             
         # Bottom plot
         # ScatterPlot of closing values
@@ -335,8 +325,14 @@ class Stock(object) :
         fig.update_layout(
                 showlegend=False,
                 height=700,
-                margin=dict(l=80, r=80, t=20, b=10)
+                margin=dict(l=80, r=80, t=20, b=10),
             )
+        fig.update_xaxes(
+            rangebreaks=[
+                dict(bounds=["sat", "mon"]), #hide weekends
+                #dict(values=["2015-12-25", "2016-01-01"])  # hide Christmas and New Year's
+            ]
+        )
         return fig
 
 
@@ -369,7 +365,7 @@ class Stock(object) :
         Mom = []
         for days in range(len(self.stockValue['Close'].array[nDays:])) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
-        self.momentum = Mom[nDays+1:]
+        self.momentum = Mom
 
 
     def computeMA(self,nDays=20,kind='simple') :
