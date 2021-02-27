@@ -64,6 +64,7 @@ class Stock(object) :
         self.stockTicker = yf.Ticker(self.stockName.upper())
         self.stockValue = self.stockTicker.history(period='max',interval='1d',group_by='ticker') 
         self.momentum   = []
+        self.momentumDerivative = []
         self.EMA20      = []
         self.EMA50      = []
         self.SMA200     = []
@@ -172,9 +173,9 @@ class Stock(object) :
             enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_semaphore(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.EMA50):].index) 
         
 
-        # Plot the Momentum 
+        # Plot the Momentum & Volume
         if Momentum == True :
-            df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[14:]})
+            df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[len(self.stockValue['Close'].array)-len(self.momentum):]})
 
             # Volume on secondary axis
             fig.add_trace(
@@ -363,7 +364,7 @@ class Stock(object) :
             Days used to compute the momentum, by default 14
         """
         Mom = []
-        for days in range(len(self.stockValue['Close'].array[nDays:])) :
+        for days in range(nDays,len(self.stockValue['Close'].array)) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
         self.momentum = Mom
 
