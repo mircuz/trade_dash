@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from .forecast import AutoARIMA, prophet
 from itertools import compress
+from .utils import derivative
 
 
 # Class Definitions
@@ -176,7 +177,8 @@ class Stock(object) :
         # Plot the Momentum & Volume
         if Momentum == True :
             df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[len(self.stockValue['Close'].array)-len(self.momentum):]})
-
+            dMom = pd.DataFrame({'mom' : self.momentumDerivative, 'date' : self.stockValue['Close'].index[len(self.stockValue['Close'].array)-len(self.momentumDerivative):]})
+            
             # Volume on secondary axis
             fig.add_trace(
                 go.Bar(
@@ -356,7 +358,7 @@ class Stock(object) :
 
     def computeMomentum(self,nDays=14) :
         """
-        Compute Momentum
+        Compute Momentum and its derivative
 
         Parameters
         ----------
@@ -367,6 +369,7 @@ class Stock(object) :
         for days in range(nDays,len(self.stockValue['Close'].array)) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
         self.momentum = Mom
+        self.momentumDerivative = derivative(self.momentum)
 
 
     def computeMA(self,nDays=20,kind='simple') :
