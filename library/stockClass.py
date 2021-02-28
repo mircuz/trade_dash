@@ -109,69 +109,6 @@ class Stock(object) :
                 name=self.stockName),
             row=1, col=1)
 
-        # Optional Moving Average Plots
-        trigger_20_50 = 0;  trigger_50_200 = 0  
-        if SMA200 == True :
-            fig.add_trace(
-                go.Scatter(
-                    x=self.stockValue['Close'][-len(self.SMA200):].index,
-                    y=self.SMA200,
-                    marker_color='#FF1493',
-                    name='SMA200',
-                ),
-            row=1, col=1)
-            trigger_50_200 += 0.5
-
-        if EMA50 == True :
-            fig.add_trace(
-                go.Scatter(
-                    x=self.stockValue['Close'][-len(self.EMA50):].index,
-                    y=self.EMA50,
-                    marker_color='#9400D3',
-                    name='EMA50',
-                ),
-            row=1, col=1)
-            trigger_20_50 += 0.5;   trigger_50_200 += 0.5
-        
-        if EMA20 == True :
-            fig.add_trace(
-                go.Scatter(
-                    x=self.stockValue['Close'][-len(self.EMA20):].index,
-                    y=self.EMA20,
-                    marker_color='#4169E1',
-                    name='EMA20',
-                ),
-            row=1, col=1)
-            trigger_20_50 += 0.5
-
-        if trigger_20_50 == 1 :
-            enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA20):].index) 
-
-            fig.add_trace(
-                go.Scatter(
-                    x=enterDay_20_50,
-                    y=self.stockValue['Close'][enterDay_20_50],
-                    mode="markers",
-                    marker_color='blue',
-                    marker_symbol=108,
-                    name='Enter MA',
-                    marker_line_width=8
-                ),
-            row=1, col=1)
-            fig.add_trace(
-                go.Scatter(
-                    x=exitDay_20_50,
-                    y=self.stockValue['Close'][exitDay_20_50],
-                    mode="markers",
-                    marker_color='#AF0038',
-                    marker_symbol=107,
-                    name='Exit MA',
-                    marker_line_width=8
-                ),
-            row=1, col=1)
-        if trigger_50_200 == 1 :
-            enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_buyLogic(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.EMA50):].index) 
-        
 
         # Plot the Momentum & Volume
         if Momentum == True :
@@ -216,6 +153,69 @@ class Stock(object) :
                 name=self.stockName),
             row=scatterPlotRow, col=1)
 
+        # Optional Moving Average Plots
+        trigger_20_50 = 0;  trigger_50_200 = 0  
+        if SMA200 == True :
+            fig.add_trace(
+                go.Scatter(
+                    x=self.stockValue['Close'][-len(self.SMA200):].index,
+                    y=self.SMA200,
+                    marker_color='#FF1493',
+                    name='SMA200',
+                ),
+            row=scatterPlotRow, col=1)
+            trigger_50_200 += 0.5
+
+        if EMA50 == True :
+            fig.add_trace(
+                go.Scatter(
+                    x=self.stockValue['Close'][-len(self.EMA50):].index,
+                    y=self.EMA50,
+                    marker_color='#9400D3',
+                    name='EMA50',
+                ),
+            row=scatterPlotRow, col=1)
+            trigger_20_50 += 0.5;   trigger_50_200 += 0.5
+        
+        if EMA20 == True :
+            fig.add_trace(
+                go.Scatter(
+                    x=self.stockValue['Close'][-len(self.EMA20):].index,
+                    y=self.EMA20,
+                    marker_color='#4169E1',
+                    name='EMA20',
+                ),
+            row=scatterPlotRow, col=1)
+            trigger_20_50 += 0.5
+
+        if trigger_20_50 == 1 :
+            enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA20):].index) 
+
+            fig.add_trace(
+                go.Scatter(
+                    x=enterDay_20_50,
+                    y=self.stockValue['Close'][enterDay_20_50],
+                    mode="markers",
+                    marker_color='blue',
+                    marker_symbol=108,
+                    name='Enter MA',
+                    marker_line_width=8
+                ),
+            row=scatterPlotRow, col=1)
+            fig.add_trace(
+                go.Scatter(
+                    x=exitDay_20_50,
+                    y=self.stockValue['Close'][exitDay_20_50],
+                    mode="markers",
+                    marker_color='#AF0038',
+                    marker_symbol=107,
+                    name='Exit MA',
+                    marker_line_width=8
+                ),
+            row=scatterPlotRow, col=1)
+        if trigger_50_200 == 1 :
+            enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_buyLogic(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.EMA50):].index) 
+        
         # Forecast
         if ARIMA == True :
             forecasted, lowerConfidence, upperConfidence = AutoARIMA(self)
@@ -291,7 +291,7 @@ class Stock(object) :
                mode="markers",
                x=maxs,
                y=self.stockValue['Close'][maxs].array, 
-               marker_symbol=6, marker_color='rgb(251,180,174)', marker_line_width=2,
+               marker_symbol=6, marker_color='#00CC96', marker_line_width=2,
                showlegend=False,
                name='MAX'),
             row=scatterPlotRow, col=1)
@@ -300,7 +300,7 @@ class Stock(object) :
                mode="markers",
                x=mins,
                y=self.stockValue['Close'][mins].array, 
-               marker_symbol=5, marker_color='#00CC96', marker_line_width=1,
+               marker_symbol=5, marker_color='rgb(251,180,174)', marker_line_width=1,
                showlegend=False,
                name='MIN'),
            row=scatterPlotRow, col=1)
