@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from .forecast import AutoARIMA, prophet
 from itertools import compress
+from datetime import date
 from .utils import derivative, computeMinMax
 
 
@@ -68,6 +69,8 @@ class Stock(object) :
         self.EMA20      = []
         self.EMA50      = []
         self.SMA200     = []
+        self.dateMaxs   = []
+        self.dateMins   = []
         self.figHandler = []
         
 
@@ -132,9 +135,6 @@ class Stock(object) :
                     x=df['date'],
                     y=df['mom'],
                     marker=dict(
-                        # cmax=max(df['mom']),
-                        # cmid=0,
-                        # cmin=min(df['mom']),
                         color='gray',
                         size=1,
                         autocolorscale=True
@@ -188,6 +188,7 @@ class Stock(object) :
             row=scatterPlotRow, col=1)
             trigger_20_50 += 0.5
 
+        # Suggested In/Out based on EMAs
         if trigger_20_50 == 1 :
             enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA20):].index) 
 
@@ -285,12 +286,12 @@ class Stock(object) :
                 row=scatterPlotRow, col=1)
 
         # Overlap local Minimun and Maximum to the bottom plot
-        maxs, mins = computeMinMax(self.stockValue['Close'])
+        self.dateMaxs, self.dateMins = computeMinMax(self.stockValue['Close'])
         fig.add_trace(
            go.Scatter(
                mode="markers",
-               x=maxs,
-               y=self.stockValue['Close'][maxs].array, 
+               x=self.dateMaxs,
+               y=self.stockValue['Close'][self.dateMaxs].array, 
                marker_symbol=6, marker_color='#00CC96', marker_line_width=2,
                showlegend=False,
                name='MAX'),
@@ -298,12 +299,36 @@ class Stock(object) :
         fig.add_trace(
            go.Scatter(
                mode="markers",
-               x=mins,
-               y=self.stockValue['Close'][mins].array, 
+               x=self.dateMins,
+               y=self.stockValue['Close'][self.dateMins].array, 
                marker_symbol=5, marker_color='rgb(251,180,174)', marker_line_width=1,
                showlegend=False,
                name='MIN'),
            row=scatterPlotRow, col=1)
+        # Suggested In/Out based on Trends
+        mins, maxs = self.minMaxTrend_buylogic()
+        fig.add_trace(
+                go.Scatter(
+                    x=enterDay_20_50,
+                    y=self.stockValue['Close'][enterDay_20_50],
+                    mode="markers",
+                    marker_color='blue',
+                    marker_symbol=108,
+                    name='Enter Trend',
+                    marker_line_width=8
+                ),
+            row=scatterPlotRow, col=1)
+            # fig.add_trace(
+            #     go.Scatter(
+            #         x=exitDay_20_50,
+            #         y=self.stockValue['Close'][exitDay_20_50],
+            #         mode="markers",
+            #         marker_color='#AF0038',
+            #         marker_symbol=107,
+            #         name='Exit MA',
+            #         marker_line_width=8
+            #     ),
+            # row=scatterPlotRow, col=1)
 
         # Finishing touches
         fig.update(layout_xaxis_rangeslider_visible=False)
@@ -351,7 +376,7 @@ class Stock(object) :
         for days in range(nDays,len(self.stockValue['Close'].array)) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
         self.momentum = Mom
-        self.momentumDerivative = derivative(self.momentum, schema='upwind', order='third')
+        self.momentumDerivative = derivative(self.momentum, schema='upwind', order='first')
 
 
     def computeMA(self,nDays=20,kind='simple') :
@@ -386,10 +411,12 @@ class Stock(object) :
             return EMA
 
 
-    def trend_identification_minMax(self) :
-        #TBD
-        pass 
-
+    def minMaxTrend_buylogic(self,windowSize=60) :
+        mins, maxs = []
+        today = date.today()
+        dateMins = self.dateMins[today-windowSize:]
+        dateMaxs = self.dateMaxs[today-windowSize:]
+        return mins, maxs
 
     def MA_buyLogic(self, first, second, timeHistory) :
         """
