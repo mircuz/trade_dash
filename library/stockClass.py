@@ -2,12 +2,11 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import yfinance as yf
-import scipy.signal as signal
 import numpy as np
 import pandas as pd
 from .forecast import AutoARIMA, prophet
 from itertools import compress
-from .utils import derivative
+from .utils import derivative, computeMinMax
 
 
 # Class Definitions
@@ -146,7 +145,7 @@ class Stock(object) :
             trigger_20_50 += 0.5
 
         if trigger_20_50 == 1 :
-            enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_semaphore(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA20):].index) 
+            enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA20):].index) 
 
             fig.add_trace(
                 go.Scatter(
@@ -171,7 +170,7 @@ class Stock(object) :
                 ),
             row=1, col=1)
         if trigger_50_200 == 1 :
-            enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_semaphore(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.EMA50):].index) 
+            enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_buyLogic(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.EMA50):].index) 
         
 
         # Plot the Momentum & Volume
@@ -286,12 +285,12 @@ class Stock(object) :
                 row=scatterPlotRow, col=1)
 
         # Overlap local Minimun and Maximum to the bottom plot
-        maxs, mins = self.computeMinMax()
+        maxs, mins = computeMinMax(self.stockValue['Close'])
         fig.add_trace(
            go.Scatter(
                mode="markers",
-               x=self.stockValue['Close'][maxs[-30:]].index,
-               y=self.stockValue['Close'].array[maxs[-30:]], 
+               x=maxs,
+               y=self.stockValue['Close'][maxs].array, 
                marker_symbol=6, marker_color='rgb(251,180,174)', marker_line_width=2,
                showlegend=False,
                name='MAX'),
@@ -299,8 +298,8 @@ class Stock(object) :
         fig.add_trace(
            go.Scatter(
                mode="markers",
-               x=self.stockValue['Close'][mins[-30:]].index,
-               y=self.stockValue['Close'].array[mins[-30:]], 
+               x=mins,
+               y=self.stockValue['Close'][mins].array, 
                marker_symbol=5, marker_color='#00CC96', marker_line_width=1,
                showlegend=False,
                name='MIN'),
@@ -339,23 +338,6 @@ class Stock(object) :
         return fig
 
 
-    def computeMinMax(self) :
-        """
-        Compute local Maximum and Minimum in the last 90 days
-
-        Returns
-        -------
-        list 
-            List of the local Maximum of the stock
-        list
-            List of the local minimum of the stock 
-        """
-        # Reverse list to have the peaks tackled on the latest values instead of historical ones
-        peaksList, _ = signal.find_peaks(self.stockValue['Close'].values[::-1],distance=10)
-        lowsList, _ = signal.find_peaks(-self.stockValue['Close'].values[::-1],distance=10)
-        return peaksList,lowsList
-
-
     def computeMomentum(self,nDays=14) :
         """
         Compute Momentum and its derivative
@@ -369,7 +351,7 @@ class Stock(object) :
         for days in range(nDays,len(self.stockValue['Close'].array)) :
             Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
         self.momentum = Mom
-        self.momentumDerivative = derivative(self.momentum)
+        self.momentumDerivative = derivative(self.momentum, schema='upwind', order='third')
 
 
     def computeMA(self,nDays=20,kind='simple') :
@@ -409,7 +391,32 @@ class Stock(object) :
         pass 
 
 
-    def MA_semaphore(self, first, second, timeHistory) :
+    def MA_buyLogic(self, first, second, timeHistory) :
+        """
+        In Out market logic based on Moving Average only
+        It will advice to buy when the first MA is above the second MA, typically 
+        we use EMA20 as first and EMA50 as second
+
+        Parameters
+        ----------
+        first : array
+            moving average self object
+        second : array
+            moving average self object
+        timeHistory : array.index
+            indexes of the values which define the perimeter of the array
+
+        Returns
+        -------
+        enterDay
+            Days in which buy is wise (Delta >0)
+        exitDay
+            Days in which sell is wise (Delta <0)
+        upsDate
+            List of timestamps of positive deltas
+        positiveDiffs
+            List of values of the positive deltas
+        """        
         # Delta first vs second positive => ascending trend
         zipped = zip(first, second[-len(first):])
         difference = [];    comp = []
