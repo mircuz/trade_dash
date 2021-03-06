@@ -1,5 +1,22 @@
 # Derivative scheme
 def derivative(A, schema='upwind', order='first') :
+    """
+    Compute the derivative of the array A
+
+    Parameters
+    ----------
+    A : array
+        f(x)
+    schema : str, optional, [upwind/centered]
+        Define the differentiation schema, by default 'upwind'
+    order : str, optional, [first/second/third]
+        Define the order of the derivative schema, by default 'first'
+
+    Returns
+    -------
+    array
+        Derivative of the array A
+    """    
     dA = []
     if schema == 'upwind' :
         if order == 'first' : 
@@ -19,7 +36,23 @@ def derivative(A, schema='upwind', order='first') :
     return dA
 
 
+def nearest(items, pivot):
+    """
+    Calculate the closest item to the pivot value
 
+    Parameters
+    ----------
+    items : array
+        Array which contains the list of dates to lookup in
+    pivot : type(array[0])
+        Reference value
+
+    Returns
+    -------
+    type(array[0])
+        Item in items array which is the closest to the pivot ones
+    """    
+    return min(items, key=lambda x: abs(x - pivot))
 
 
 def computeMinMax(arr,length=200) :

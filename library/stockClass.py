@@ -6,8 +6,9 @@ import numpy as np
 import pandas as pd
 from .forecast import AutoARIMA, prophet
 from itertools import compress
-from datetime import date
-from .utils import derivative, computeMinMax
+from datetime import datetime, timedelta
+from .utils import derivative, computeMinMax, nearest
+from trendet import identify_df_trends
 
 
 # Class Definitions
@@ -191,7 +192,6 @@ class Stock(object) :
         # Suggested In/Out based on EMAs
         if trigger_20_50 == 1 :
             enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA20):].index) 
-
             fig.add_trace(
                 go.Scatter(
                     x=enterDay_20_50,
@@ -305,30 +305,56 @@ class Stock(object) :
                showlegend=False,
                name='MIN'),
            row=scatterPlotRow, col=1)
+        # Plot shadowed areas based on trends TODO
+        trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic()
+        labels = trends['Up Trend'].dropna().unique().tolist()
+        for label in labels :
+            fig.add_trace(
+                    go.Scatter(
+                        x=trends[trends['Up Trend'] == label]['Date'],
+                        y=trends[trends['Up Trend'] == label]['Close'],
+                        mode="lines",
+                        marker_color='blue',
+                        name='Positive Trend',
+                   
+                    ),
+                row=scatterPlotRow, col=1)
+        labels = trends['Down Trend'].dropna().unique().tolist()
+        for label in labels :
+            fig.add_trace(
+                    go.Scatter(
+                        x=trends[trends['Down Trend'] == label]['Date'],
+                        y=trends[trends['Down Trend'] == label]['Close'],
+                        mode="lines",
+                        marker_color='#AF0038',
+                        name='Negative Trend',
+                        
+                    ),
+                row=scatterPlotRow, col=1)
+
         # Suggested In/Out based on Trends
-        mins, maxs = self.minMaxTrend_buylogic()
         fig.add_trace(
-                go.Scatter(
-                    x=enterDay_20_50,
-                    y=self.stockValue['Close'][enterDay_20_50],
-                    mode="markers",
-                    marker_color='blue',
-                    marker_symbol=108,
-                    name='Enter Trend',
-                    marker_line_width=8
-                ),
-            row=scatterPlotRow, col=1)
-            # fig.add_trace(
-            #     go.Scatter(
-            #         x=exitDay_20_50,
-            #         y=self.stockValue['Close'][exitDay_20_50],
-            #         mode="markers",
-            #         marker_color='#AF0038',
-            #         marker_symbol=107,
-            #         name='Exit MA',
-            #         marker_line_width=8
-            #     ),
-            # row=scatterPlotRow, col=1)
+            go.Scatter(
+                x=enterDaysTrend,
+                y=self.stockValue['Close'][enterDaysTrend],
+                mode="markers",
+                marker_color='blue',
+                marker_symbol=108,
+                name='Positive Trend',
+                marker_line_width=8
+            ),
+        row=scatterPlotRow, col=1)
+        fig.add_trace(
+            go.Scatter(
+                x=exitDaysTrend,
+                y=self.stockValue['Close'][exitDaysTrend],
+                mode="markers",
+                marker_color='#AF0038',
+                marker_symbol=107,
+                name='Negative Trend',
+                marker_line_width=8
+            ),
+        row=scatterPlotRow, col=1)
 
         # Finishing touches
         fig.update(layout_xaxis_rangeslider_visible=False)
@@ -411,12 +437,19 @@ class Stock(object) :
             return EMA
 
 
-    def minMaxTrend_buylogic(self,windowSize=60) :
-        mins, maxs = []
-        today = date.today()
-        dateMins = self.dateMins[today-windowSize:]
-        dateMaxs = self.dateMaxs[today-windowSize:]
-        return mins, maxs
+    def minMaxTrend_buylogic(self,daysToSubtract=60) :
+        # Time windowing
+        mins = [];      maxs = []
+        dateBottom = datetime.today() - timedelta(days=daysToSubtract)
+        resizedDf = self.stockValue.iloc[-daysToSubtract:]
+        trends = identify_df_trends(df=resizedDf, column='Close')
+        trends.reset_index(inplace=True)
+        labels = trends['Up Trend'].dropna().unique().tolist()
+        enterDays = [];     exitDays = []
+        for label in labels :
+            enterDays.append(trends[trends['Up Trend'] == label]['Date'].iloc[0])
+            exitDays.append(trends[trends['Up Trend'] == label]['Date'].iloc[-1])
+        return trends, enterDays, exitDays
 
     def MA_buyLogic(self, first, second, timeHistory) :
         """
