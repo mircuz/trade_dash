@@ -124,7 +124,7 @@ class Stock(object) :
                 go.Bar(
                     x=self.stockValue['Close'].index,
                     y=self.stockValue['Volume'].values /max(self.stockValue['Volume']),
-                    marker_color='silver',
+                    marker_color='black',
                     name='Volume',
                 ),row=2, col=1,
                 secondary_y=True)
@@ -136,7 +136,7 @@ class Stock(object) :
                     x=df['date'],
                     y=df['mom'],
                     marker=dict(
-                        color='gray',
+                        color='silver',
                         size=1,
                         autocolorscale=True
                     ),
@@ -306,7 +306,7 @@ class Stock(object) :
                name='MIN'),
            row=scatterPlotRow, col=1)
         # Plot shadowed areas based on trends TODO
-        trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic()
+        trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic_benchmark()
         labels = trends['Up Trend'].dropna().unique().tolist()
         for label in labels :
             fig.add_trace(
@@ -314,7 +314,7 @@ class Stock(object) :
                         x=trends[trends['Up Trend'] == label]['Date'],
                         y=trends[trends['Up Trend'] == label]['Close'],
                         mode="lines",
-                        marker_color='blue',
+                        marker_color='green',
                         name='Positive Trend',
                    
                     ),
@@ -355,6 +355,15 @@ class Stock(object) :
                 marker_line_width=8
             ),
         row=scatterPlotRow, col=1)
+
+
+
+
+        mins = self.minMaxTrend_buylogic(daysToSubtract=180)
+
+
+
+
 
         # Finishing touches
         fig.update(layout_xaxis_rangeslider_visible=False)
@@ -437,10 +446,38 @@ class Stock(object) :
             return EMA
 
 
-    def minMaxTrend_buylogic(self,daysToSubtract=60) :
+    def minMaxTrend_buylogic(self,daysToSubtract=180) :
         # Time windowing
-        mins = [];      maxs = []
+        trend = []
         dateBottom = datetime.today() - timedelta(days=daysToSubtract)
+        # Calculate of trends based on comparison between current value and latest ones
+        for i in range(1,len(self.dateMaxs)) :
+            if self.stockValue['Close'][self.dateMaxs[i]] > self.stockValue['Close'][self.dateMaxs[i-1]] :
+                trend.append((self.dateMaxs[i],1))
+            else :
+                trend.append((self.dateMaxs[i],0))
+        for i in range(1,len(self.dateMins)) :
+            if self.stockValue['Close'][self.dateMins[i]] > self.stockValue['Close'][self.dateMins[i-1]] :
+                trend.append((self.dateMins[i],1))
+            else : 
+                trend.append((self.dateMins[i],0))
+        trend = sorted(trend, key=lambda x:x[0])
+        # Filtro moving average per evitare noise??
+        return trend
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def minMaxTrend_buylogic_benchmark(self,daysToSubtract=180) :
         resizedDf = self.stockValue.iloc[-daysToSubtract:]
         trends = identify_df_trends(df=resizedDf, column='Close')
         trends.reset_index(inplace=True)
@@ -450,6 +487,7 @@ class Stock(object) :
             enterDays.append(trends[trends['Up Trend'] == label]['Date'].iloc[0])
             exitDays.append(trends[trends['Up Trend'] == label]['Date'].iloc[-1])
         return trends, enterDays, exitDays
+
 
     def MA_buyLogic(self, first, second, timeHistory) :
         """
