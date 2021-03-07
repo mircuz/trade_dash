@@ -7,7 +7,7 @@ import pandas as pd
 from .forecast import AutoARIMA, prophet
 from itertools import compress
 from datetime import datetime, timedelta
-from .utils import derivative, computeMinMax, nearest
+from .utils import derivative, computeMinMax, nearest, ColNum2ColName
 from trendet import identify_df_trends
 
 
@@ -306,25 +306,25 @@ class Stock(object) :
                name='MIN'),
            row=scatterPlotRow, col=1)
         # Plot shadowed areas based on trends TODO
-        trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic_benchmark()
-        labels = trends['Up Trend'].dropna().unique().tolist()
+        trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic(windowSize=3)
+        labels = trends['UpTrend'].dropna().unique().tolist()
         for label in labels :
             fig.add_trace(
                     go.Scatter(
-                        x=trends[trends['Up Trend'] == label]['Date'],
-                        y=trends[trends['Up Trend'] == label]['Close'],
+                        x=trends[trends['UpTrend'] == label]['Date'],
+                        y=self.stockValue['Close'][trends[trends['UpTrend'] == label]['Date']],
                         mode="lines",
                         marker_color='green',
                         name='Positive Trend',
                    
                     ),
                 row=scatterPlotRow, col=1)
-        labels = trends['Down Trend'].dropna().unique().tolist()
+        labels = trends['DownTrend'].dropna().unique().tolist()
         for label in labels :
             fig.add_trace(
                     go.Scatter(
-                        x=trends[trends['Down Trend'] == label]['Date'],
-                        y=trends[trends['Down Trend'] == label]['Close'],
+                        x=trends[trends['DownTrend'] == label]['Date'],
+                        y=self.stockValue['Close'][trends[trends['UpTrend'] == label]['Date']],
                         mode="lines",
                         marker_color='#AF0038',
                         name='Negative Trend',
@@ -356,10 +356,6 @@ class Stock(object) :
             ),
         row=scatterPlotRow, col=1)
 
-
-
-
-        mins = self.minMaxTrend_buylogic(daysToSubtract=180)
 
 
 
@@ -446,11 +442,14 @@ class Stock(object) :
             return EMA
 
 
-    def minMaxTrend_buylogic(self,daysToSubtract=180) :
+    def minMaxTrend_buylogic(self, daysToSubtract=180, windowSize=4) :
         # Time windowing
         trend = []
         dateBottom = datetime.today() - timedelta(days=daysToSubtract)
         # Calculate of trends based on comparison between current value and latest ones
+
+
+        # E se usassi non la lista dei punti estremanti ma il valore dell'azione??
         for i in range(1,len(self.dateMaxs)) :
             if self.stockValue['Close'][self.dateMaxs[i]] > self.stockValue['Close'][self.dateMaxs[i-1]] :
                 trend.append((self.dateMaxs[i],1))
@@ -462,8 +461,29 @@ class Stock(object) :
             else : 
                 trend.append((self.dateMins[i],0))
         trend = sorted(trend, key=lambda x:x[0])
-        # Filtro moving average per evitare noise??
-        return trend
+        # Count trends in a window
+        weightedTrend = pd.DataFrame(columns=['Date','UpTrend','DownTrend'])
+        labelN = 1
+        label = ColNum2ColName(labelN)
+        for i in range(windowSize, len(trend)) :
+            # If at least 70% of points says it is a positive trend append as positive
+            if sum([x[1] for x in trend[i-windowSize:i]]) > (0.7*windowSize) : 
+                toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'UpTrend':[label]})
+                weightedTrend = weightedTrend.append(toAppend)
+            # Otherwise if 70% of points says it is a negative trend then append as negative
+            elif sum([x[1] for x in trend[i-windowSize:i]]) < (0.3*windowSize) : 
+                toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'DownTrend':[label]})
+                weightedTrend = weightedTrend.append(toAppend)
+            # Else skip
+            else :
+                label = ColNum2ColName(labelN)
+                labelN +=1
+        labels = weightedTrend['UpTrend'].dropna().unique().tolist()
+        enterDays = [];     exitDays = []
+        for label in labels :
+            enterDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[0])
+            exitDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[-1])
+        return weightedTrend, enterDays, exitDays
 
 
 

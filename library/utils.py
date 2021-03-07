@@ -75,3 +75,14 @@ def computeMinMax(arr,length=200) :
             if arr[i-1] > arr[i] < arr[i+1] :
                 minima.append(arr.index[i]) 
         return maxima, minima
+
+
+def ColNum2ColName(n):
+   convertString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+   base = 26
+   i = n - 1
+
+   if i < base:
+      return convertString[i]
+   else:
+      return ColNum2ColName(i//base) + convertString[i%base]
