@@ -7,7 +7,7 @@ import pandas as pd
 from .forecast import AutoARIMA, prophet
 from itertools import compress
 from datetime import datetime, timedelta
-from .utils import derivative, computeMinMax, nearest, ColNum2ColName
+from .utils import derivative, computeMinMax, nearest, nearest_yesterday, ColNum2ColName
 from trendet import identify_df_trends
 
 
@@ -443,24 +443,20 @@ class Stock(object) :
 
 
     def minMaxTrend_buylogic(self, daysToSubtract=180, windowSize=4) :
-        # Time windowing
         trend = []
-        dateBottom = datetime.today() - timedelta(days=daysToSubtract)
-        # Calculate of trends based on comparison between current value and latest ones
-
-
-        # E se usassi non la lista dei punti estremanti ma il valore dell'azione??
-        for i in range(1,len(self.dateMaxs)) :
-            if self.stockValue['Close'][self.dateMaxs[i]] > self.stockValue['Close'][self.dateMaxs[i-1]] :
-                trend.append((self.dateMaxs[i],1))
+        # At each iteration compare the value with last Min and Max 
+        for i in range(daysToSubtract) :
+            lastMin = nearest_yesterday(self.dateMins, self.stockValue.iloc[-daysToSubtract+i].name)
+            lastMax = nearest_yesterday(self.dateMaxs, self.stockValue.iloc[-daysToSubtract+i].name)
+            if (lastMax == []) or (lastMin == []) : continue
+            if self.stockValue['Close'][-daysToSubtract+i] > self.stockValue['Close'][lastMax] :
+                trend.append((self.stockValue.iloc[-daysToSubtract+i].name,1))
+            elif self.stockValue['Close'][-daysToSubtract+i] < self.stockValue['Close'][lastMin] :
+                trend.append((self.stockValue.iloc[-daysToSubtract+i].name,0))
             else :
-                trend.append((self.dateMaxs[i],0))
-        for i in range(1,len(self.dateMins)) :
-            if self.stockValue['Close'][self.dateMins[i]] > self.stockValue['Close'][self.dateMins[i-1]] :
-                trend.append((self.dateMins[i],1))
-            else : 
-                trend.append((self.dateMins[i],0))
-        trend = sorted(trend, key=lambda x:x[0])
+                pass
+
+
         # Count trends in a window
         weightedTrend = pd.DataFrame(columns=['Date','UpTrend','DownTrend'])
         labelN = 1

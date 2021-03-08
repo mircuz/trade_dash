@@ -55,6 +55,29 @@ def nearest(items, pivot):
     return min(items, key=lambda x: abs(x - pivot))
 
 
+def nearest_yesterday(items, pivot):
+    """
+    Calculate the closest passed item to the pivot value 
+
+    Parameters
+    ----------
+    items : array
+        Array which contains the list of dates to lookup in
+    pivot : type(array[0])
+        Reference value
+
+    Returns
+    -------
+    type(array[0])
+        Item in items array which is the closest to the pivot ones
+    """ 
+    i = 0
+    while items[i] < pivot :
+        i += 1
+        if i == len(items) : break
+    return items[i-1]
+
+
 def computeMinMax(arr,length=200) :
         """
         Compute local Maximum and Minimum in the last length days
