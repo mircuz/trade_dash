@@ -306,7 +306,7 @@ class Stock(object) :
                name='MIN'),
            row=scatterPlotRow, col=1)
         # Plot shadowed areas based on trends TODO
-        trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic(windowSize=3)
+        trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic(windowSize=6)
         labels = trends['UpTrend'].dropna().unique().tolist()
         for label in labels :
             fig.add_trace(
@@ -316,7 +316,6 @@ class Stock(object) :
                         mode="lines",
                         marker_color='green',
                         name='Positive Trend',
-                   
                     ),
                 row=scatterPlotRow, col=1)
         labels = trends['DownTrend'].dropna().unique().tolist()
@@ -324,11 +323,10 @@ class Stock(object) :
             fig.add_trace(
                     go.Scatter(
                         x=trends[trends['DownTrend'] == label]['Date'],
-                        y=self.stockValue['Close'][trends[trends['UpTrend'] == label]['Date']],
+                        y=self.stockValue['Close'][trends[trends['DownTrend'] == label]['Date']],
                         mode="lines",
-                        marker_color='#AF0038',
-                        name='Negative Trend',
-                        
+                        marker_color='orange',
+                        name='Negative Trend',    
                     ),
                 row=scatterPlotRow, col=1)
 
@@ -452,9 +450,9 @@ class Stock(object) :
             if self.stockValue['Close'][-daysToSubtract+i] > self.stockValue['Close'][lastMax] :
                 trend.append((self.stockValue.iloc[-daysToSubtract+i].name,1))
             elif self.stockValue['Close'][-daysToSubtract+i] < self.stockValue['Close'][lastMin] :
-                trend.append((self.stockValue.iloc[-daysToSubtract+i].name,0))
+                trend.append((self.stockValue.iloc[-daysToSubtract+i].name,-1))
             else :
-                pass
+                trend.append((self.stockValue.iloc[-daysToSubtract+i].name,0))
 
 
         # Count trends in a window
@@ -463,17 +461,17 @@ class Stock(object) :
         label = ColNum2ColName(labelN)
         for i in range(windowSize, len(trend)) :
             # If at least 70% of points says it is a positive trend append as positive
-            if sum([x[1] for x in trend[i-windowSize:i]]) > (0.7*windowSize) : 
+            if [x[1] for x in trend[i-windowSize:i]].count(1) >= int(0.7*windowSize) : 
                 toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'UpTrend':[label]})
                 weightedTrend = weightedTrend.append(toAppend)
             # Otherwise if 70% of points says it is a negative trend then append as negative
-            elif sum([x[1] for x in trend[i-windowSize:i]]) < (0.3*windowSize) : 
+            elif [x[1] for x in trend[i-windowSize:i]].count(-1) >= int(0.7*windowSize) : 
                 toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'DownTrend':[label]})
                 weightedTrend = weightedTrend.append(toAppend)
             # Else skip
             else :
-                label = ColNum2ColName(labelN)
                 labelN +=1
+                label = ColNum2ColName(labelN)
         labels = weightedTrend['UpTrend'].dropna().unique().tolist()
         enterDays = [];     exitDays = []
         for label in labels :
@@ -485,8 +483,10 @@ class Stock(object) :
 
 
 
-
-
+        def minMaxTrend_buylogic_dLogic(self, daysToSubtract=180, windowSize=4) :
+            # Usare la regressione lineare a n punti, considerare check sulla derivata
+            # limitando l'escursione rispetto ai valori precedenti e valori limite di derivata 
+            pass
 
 
 

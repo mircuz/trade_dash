@@ -78,26 +78,42 @@ def nearest_yesterday(items, pivot):
     return items[i-1]
 
 
-def computeMinMax(arr,length=200) :
-        """
-        Compute local Maximum and Minimum in the last length days
+def computeMinMax(arr,length=200, tollerance=1.5) :
+    """
+    Compute mins and maxs of the array
 
-        Returns
-        -------
-        list 
-            List of the local Maximum of the stock
-        list
-            List of the local minimum of the stock 
-        """
-        maxima = [];    minima = []
-        # Compute for the last n values
-        length = len(arr) - length
-        for i in range(length,len(arr)-1) : 
-            if arr[i-1] < arr[i] > arr[i+1] :
-                maxima.append(arr.index[i]) 
-            if arr[i-1] > arr[i] < arr[i+1] :
-                minima.append(arr.index[i]) 
-        return maxima, minima
+    Parameters
+    ----------
+    arr : list
+        f(x)
+    length : int, optional
+        Window length of computation, by default 200
+    tollerance : float, optional
+        Percentual tollerance which determines if values are 
+        too close to each other to be declared extremant points, by default 1.5
+
+    Returns
+    -------
+    list
+        List of maxima
+    list
+        List of minima
+    """        
+    maxima = [];    minima = []
+    # Compute for the last n values
+    length = len(arr) - length
+    for i in range(length,len(arr)-1) : 
+        if arr[i-1] < arr[i] > arr[i+1] :
+            if maxima == [] : maxima.append(arr.index[i]) 
+            if ((arr[maxima[-1]]+arr[maxima[-1]]*0.01*tollerance) >= arr[i]) \
+                and (((arr[maxima[-1]]-arr[maxima[-1]]*0.01*tollerance) <= arr[i])): continue
+            maxima.append(arr.index[i]) 
+        if arr[i-1] > arr[i] < arr[i+1] :
+            if minima == [] : minima.append(arr.index[i]) 
+            if ((arr[minima[-1]]+arr[minima[-1]]*0.01*tollerance) >= arr[i] ) \
+                and ((arr[minima[-1]]-arr[minima[-1]]*0.01*tollerance <= arr[i])): continue
+            minima.append(arr.index[i]) 
+    return maxima[1:], minima[1:]
 
 
 def ColNum2ColName(n):
