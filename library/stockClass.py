@@ -394,7 +394,7 @@ class Stock(object) :
 
     def computeMomentum(self,nDays=14) :
         """
-        Compute Momentum and its derivative
+        Compute Momentum (Rate of Change) and its derivative
 
         Parameters
         ----------
@@ -403,7 +403,7 @@ class Stock(object) :
         """
         Mom = []
         for days in range(nDays,len(self.stockValue['Close'].array)) :
-            Mom.append(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])
+            Mom.append(100*(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])/self.stockValue['Close'].array[days-nDays])
         self.momentum = Mom
         self.momentumDerivative = derivative(self.momentum, schema='upwind', order='first')
 
