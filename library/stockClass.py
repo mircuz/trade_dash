@@ -440,7 +440,7 @@ class Stock(object) :
             return EMA
 
 
-    def minMaxTrend_buylogic(self, daysToSubtract=180, windowSize=4) :
+    def minMaxTrend_buylogic(self, daysToSubtract=180, windowSize=3) :
         trend = []
         # At each iteration compare the value with last Min and Max 
         for i in range(daysToSubtract) :
@@ -461,11 +461,11 @@ class Stock(object) :
         label = ColNum2ColName(labelN)
         for i in range(windowSize, len(trend)) :
             # If at least 70% of points says it is a positive trend append as positive
-            if [x[1] for x in trend[i-windowSize:i]].count(1) >= int(0.7*windowSize) : 
+            if [x[1] for x in trend[i-windowSize:i]].count(1) >= int(0.6*windowSize) : 
                 toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'UpTrend':[label]})
                 weightedTrend = weightedTrend.append(toAppend)
             # Otherwise if 70% of points says it is a negative trend then append as negative
-            elif [x[1] for x in trend[i-windowSize:i]].count(-1) >= int(0.7*windowSize) : 
+            elif [x[1] for x in trend[i-windowSize:i]].count(-1) >= int(0.6*windowSize) : 
                 toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'DownTrend':[label]})
                 weightedTrend = weightedTrend.append(toAppend)
             # Else skip
@@ -475,6 +475,7 @@ class Stock(object) :
         labels = weightedTrend['UpTrend'].dropna().unique().tolist()
         enterDays = [];     exitDays = []
         for label in labels :
+            if len(weightedTrend[weightedTrend['UpTrend'] == label]) < 4 : continue
             enterDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[0])
             exitDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[-1])
         return weightedTrend, enterDays, exitDays
