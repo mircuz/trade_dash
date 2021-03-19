@@ -67,6 +67,7 @@ class Stock(object) :
         self.stockValue = self.stockTicker.history(period='max',interval='1d',group_by='ticker') 
         self.momentum   = []
         self.momentumDerivative = []
+        self.MACD       = []
         self.EMA20      = []
         self.EMA50      = []
         self.SMA200     = []
@@ -75,7 +76,7 @@ class Stock(object) :
         self.figHandler = []
         
 
-    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum,ARIMA,Prophet) :
+    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum,MACD,ARIMA,Prophet) :
         """
         Update the graphs embeded in figHandler with the class attributes queried
 
@@ -89,13 +90,15 @@ class Stock(object) :
             Trigger to render the attribute
         Momentum : bool
             Trigger to render the attribute
+        MACD : bool
+            Trigger to render the attribute
         ARIMA : bool
             Trigger to render the attribute
         Prophet : bool
             Trigger to render the attribute
         """
-        if Momentum == True :
-            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005, row_heights=[0.45, 0.1, 0.45], 
+        if ((Momentum == True) or (MACD == True)) :
+            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.005, row_heights=[0.30, 0.25, 0.45], 
                 specs=[[{"secondary_y": False}], [{"secondary_y": True}], [{"secondary_y": False}]])
             # Embed the Momentum graph between the OHLC and minMax graph
             scatterPlotRow = 3
@@ -115,7 +118,7 @@ class Stock(object) :
 
 
         # Plot the Momentum & Volume
-        if Momentum == True :
+        if ((Momentum == True) or (MACD == True)) :
             df = pd.DataFrame({'mom' : self.momentum, 'date' : self.stockValue['Close'].index[len(self.stockValue['Close'].array)-len(self.momentum):]})
             dMom = pd.DataFrame({'mom' : self.momentumDerivative, 'date' : self.stockValue['Close'].index[len(self.stockValue['Close'].array)-len(self.momentumDerivative):]})
             
@@ -126,23 +129,42 @@ class Stock(object) :
                     y=self.stockValue['Volume'].values /max(self.stockValue['Volume']),
                     marker_color='black',
                     name='Volume',
+                    opacity=0.45,
                 ),row=2, col=1,
                 secondary_y=True)
             fig['layout']['yaxis3'].update(range=[-0.6, 0.6])
             
-            # Momentum
-            fig.add_trace(
-                go.Scatter(
-                    x=df['date'],
-                    y=df['mom'],
-                    marker=dict(
-                        color='silver',
-                        size=1,
-                        autocolorscale=True
-                    ),
-                    name='Momentum',
-                ),row=2, col=1,
+            if Momentum == True :
+                # Momentum
+                fig.add_trace(
+                    go.Scatter(
+                        x=df['date'],
+                        y=df['mom'],
+                        marker=dict(
+                            color='silver',
+                            size=1,
+                            autocolorscale=True
+                        ),
+                        name='Momentum',
+                    ),row=2, col=1,
                 secondary_y=False)
+
+            if MACD == True :
+                # MACD
+                self.MACD = self.computeMACD()
+                fig.add_trace(
+                    go.Scatter(
+                        x=self.stockValue['Close'][-len(self.MACD):].index,
+                        y=self.MACD,
+                        marker=dict(
+                            color='#00BFFF',
+                            size=1,
+                            autocolorscale=True
+                        ),
+                        name='MACD',
+                    ),row=2, col=1,
+                secondary_y=False)
+            
             
         # Bottom plot
         # ScatterPlot of closing values
@@ -330,33 +352,29 @@ class Stock(object) :
                     ),
                 row=scatterPlotRow, col=1)
 
-        # Suggested In/Out based on Trends
-        fig.add_trace(
-            go.Scatter(
-                x=enterDaysTrend,
-                y=self.stockValue['Close'][enterDaysTrend],
-                mode="markers",
-                marker_color='blue',
-                marker_symbol=108,
-                name='Positive Trend',
-                marker_line_width=8
-            ),
-        row=scatterPlotRow, col=1)
-        fig.add_trace(
-            go.Scatter(
-                x=exitDaysTrend,
-                y=self.stockValue['Close'][exitDaysTrend],
-                mode="markers",
-                marker_color='#AF0038',
-                marker_symbol=107,
-                name='Negative Trend',
-                marker_line_width=8
-            ),
-        row=scatterPlotRow, col=1)
-
-
-
-
+        # # Suggested In/Out based on Trends
+        # fig.add_trace(
+        #     go.Scatter(
+        #         x=enterDaysTrend,
+        #         y=self.stockValue['Close'][enterDaysTrend],
+        #         mode="markers",
+        #         marker_color='blue',
+        #         marker_symbol=108,
+        #         name='Positive Trend',
+        #         marker_line_width=8
+        #     ),
+        # row=scatterPlotRow, col=1)
+        # fig.add_trace(
+        #     go.Scatter(
+        #         x=exitDaysTrend,
+        #         y=self.stockValue['Close'][exitDaysTrend],
+        #         mode="markers",
+        #         marker_color='#AF0038',
+        #         marker_symbol=107,
+        #         name='Negative Trend',
+        #         marker_line_width=8
+        #     ),
+        # row=scatterPlotRow, col=1)
 
 
         # Finishing touches
@@ -440,6 +458,15 @@ class Stock(object) :
             return EMA
 
 
+    def computeMACD(self,nDays=[3,10]) :
+        shortTerm = self.computeMA(nDays=nDays[0])
+        longTerm = self.computeMA(nDays=nDays[1])
+        MACD = []
+        for i in range(len(shortTerm)) :
+            MACD.append(shortTerm[i] - longTerm[i])
+        return MACD
+
+
     def minMaxTrend_buylogic(self, daysToSubtract=180, windowSize=3) :
         trend = []
         # At each iteration compare the value with last Min and Max 
@@ -484,10 +511,10 @@ class Stock(object) :
 
 
 
-        def minMaxTrend_buylogic_dLogic(self, daysToSubtract=180, windowSize=4) :
-            # Usare la regressione lineare a n punti, considerare check sulla derivata
-            # limitando l'escursione rispetto ai valori precedenti e valori limite di derivata 
-            pass
+    def minMaxTrend_buylogic_dLogic(self, daysToSubtract=180, windowSize=4) :
+        # Usare la regressione lineare a n punti, considerare check sulla derivata
+        # limitando l'escursione rispetto ai valori precedenti e valori limite di derivata 
+        pass
 
 
 

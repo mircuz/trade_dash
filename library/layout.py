@@ -47,6 +47,13 @@ app.layout = html.Div([
                 color='#C0C0C0',
             ),
             daq.BooleanSwitch(
+                label='MACD',
+                className='one columns',
+                id='MACDToggle',
+                on=False,
+                color='#00BFFF',
+            ),
+            daq.BooleanSwitch(
                 label='ARIMA',
                 className='one columns',
                 id='ARIMAToggle',
