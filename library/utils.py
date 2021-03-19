@@ -105,14 +105,24 @@ def computeMinMax(arr,length=200, tollerance=1.5) :
     for i in range(length,len(arr)-1) : 
         if arr[i-1] < arr[i] > arr[i+1] :
             if maxima == [] : maxima.append(arr.index[i]) 
-            if ((arr[maxima[-1]]+arr[maxima[-1]]*0.01*tollerance) >= arr[i]) \
-                and (((arr[maxima[-1]]-arr[maxima[-1]]*0.01*tollerance) <= arr[i])): continue
+            if (((arr[maxima[-1]]+arr[maxima[-1]]*0.01*tollerance) >= arr[i]) \
+                and (((arr[maxima[-1]]-arr[maxima[-1]]*0.01*tollerance) <= arr[i]))
+                or
+                ((arr[minima[-1]]+arr[minima[-1]]*0.01*tollerance) >= arr[i] ) \
+                and ((arr[minima[-1]]-arr[minima[-1]]*0.01*tollerance <= arr[i]))): continue
             maxima.append(arr.index[i]) 
         if arr[i-1] > arr[i] < arr[i+1] :
             if minima == [] : minima.append(arr.index[i]) 
-            if ((arr[minima[-1]]+arr[minima[-1]]*0.01*tollerance) >= arr[i] ) \
-                and ((arr[minima[-1]]-arr[minima[-1]]*0.01*tollerance <= arr[i])): continue
+            if (((arr[minima[-1]]+arr[minima[-1]]*0.01*tollerance) >= arr[i] ) \
+                and ((arr[minima[-1]]-arr[minima[-1]]*0.01*tollerance <= arr[i]))
+                or
+                ((arr[maxima[-1]]+arr[maxima[-1]]*0.01*tollerance) >= arr[i]) \
+                and (((arr[maxima[-1]]-arr[maxima[-1]]*0.01*tollerance) <= arr[i]))): continue
             minima.append(arr.index[i]) 
+
+    i = len(arr)-1
+    if arr[-2] < arr[-1] : maxima.append(arr.index[-1]) 
+    if arr[-2] > arr[-1] : minima.append(arr.index[-1])
     return maxima[1:], minima[1:]
 
 

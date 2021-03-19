@@ -73,6 +73,8 @@ class Stock(object) :
         self.SMA200     = []
         self.dateMaxs   = []
         self.dateMins   = []
+        self.dateMaxsMACD=[]
+        self.dateMinsMACD=[]
         self.figHandler = []
         
 
@@ -164,8 +166,29 @@ class Stock(object) :
                         name='MACD',
                     ),row=2, col=1,
                 secondary_y=False)
+                # Overlap Maximum and Minimum of MACD
+                dfMACD = pd.Series(data=self.MACD, index=self.stockValue['Close'].index[len(self.stockValue['Close'].array)-len(self.MACD):])
+                self.dateMaxsMACD, self.dateMinsMACD = computeMinMax(dfMACD,length=200, tollerance=4.0)
+                fig.add_trace(
+                    go.Scatter(
+                        mode="markers",
+                        x=self.dateMaxsMACD,
+                        y=dfMACD[self.dateMaxsMACD].array, 
+                        marker_symbol=6, marker_color='#00CC96', marker_line_width=2,
+                        showlegend=False,
+                        name='MAX'),
+                    row=2, col=1)
+                fig.add_trace(
+                    go.Scatter(
+                        mode="markers",
+                        x=self.dateMinsMACD,
+                        y=dfMACD[self.dateMinsMACD].array, 
+                        marker_symbol=5, marker_color='rgb(251,180,174)', marker_line_width=1,
+                        showlegend=False,
+                        name='MIN'),
+                    row=2, col=1)
             
-            
+
         # Bottom plot
         # ScatterPlot of closing values
         fig.add_trace(
