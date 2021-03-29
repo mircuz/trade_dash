@@ -541,9 +541,6 @@ class Stock(object) :
 
 
 
-
-
-
     def minMaxTrend_buylogic_benchmark(self,daysToSubtract=180) :
         resizedDf = self.stockValue.iloc[-daysToSubtract:]
         trends = identify_df_trends(df=resizedDf, column='Close')
@@ -554,6 +551,17 @@ class Stock(object) :
             enterDays.append(trends[trends['Up Trend'] == label]['Date'].iloc[0])
             exitDays.append(trends[trends['Up Trend'] == label]['Date'].iloc[-1])
         return trends, enterDays, exitDays
+
+
+    def MACD_buyLogic(self, dfMACD) :
+        maxValues = dfMACD[self.dateMaxsMACD].array
+        minValues = dfMACD[self.dateMinsMACD].array
+        
+        dmaxValues = derivative(maxValues, schema='upwind', order='first') 
+        dminValues = derivative(minValues, schema='upwind', order='first') 
+
+
+
 
 
     def MA_buyLogic(self, first, second, timeHistory) :
