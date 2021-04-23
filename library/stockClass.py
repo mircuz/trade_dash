@@ -75,6 +75,8 @@ class Stock(object) :
         self.dateMins   = []
         self.dateMaxsMACD=[]
         self.dateMinsMACD=[]
+        self.prophetForecast = pd.DataFrame()
+        self.prophetForecast_m30 = pd.DataFrame()
         self.figHandler = []
         
 
@@ -298,14 +300,24 @@ class Stock(object) :
 
         # Forecast
         if Prophet == True :
-            prophetForecast = prophet(self)
-            # Line
+            if self.prophetForecast.empty : self.prophetForecast, self.prophetForecast_m30 = prophet(self)
+            # Line of the prediction_m30
             fig.add_trace(
                 go.Scatter(
-                    mode="markers",
-                    x=prophetForecast.ds,
-                    y=np.exp(prophetForecast.yhat),
-                    name=self.stockName + ' Prophet',
+                    mode="lines",
+                    x=self.prophetForecast_m30.ds[-60:],
+                    y=np.exp(self.prophetForecast_m30.yhat[-60:]),
+                    name='Prophet t-30 Forecast',
+                    marker_color='orange',
+                    marker_line_width=1),
+                row=scatterPlotRow, col=1)
+            # Line of the prediction
+            fig.add_trace(
+                go.Scatter(
+                    mode="lines",
+                    x=self.prophetForecast.ds[-60:],
+                    y=np.exp(self.prophetForecast.yhat)[-60:],
+                    name='Prophet Today Forecast',
                     marker_color='blue',
                     marker_line_width=1),
                 row=scatterPlotRow, col=1)
@@ -313,9 +325,9 @@ class Stock(object) :
             fig.add_trace(
                 go.Scatter(
                     mode=None,
-                    x=prophetForecast.ds[-90:],
-                    y=np.exp(prophetForecast.yhat_upper[-90:]),
-                    fill=None,
+                    x=self.prophetForecast.ds[-30:],
+                    y=np.exp(self.prophetForecast.yhat_upper[-30:]),
+                    #fill=None,
                     marker_color='lightblue',
                     name=self.stockName+' Forecast'),
                 row=scatterPlotRow, col=1)
@@ -323,9 +335,9 @@ class Stock(object) :
             fig.add_trace(
                 go.Scatter(
                     mode=None,
-                    x=prophetForecast.ds[-90:],
-                    y=np.exp(prophetForecast.yhat_lower[-90:]),
-                    fill='tonexty',
+                    x=self.prophetForecast.ds[-45:],
+                    y=np.exp(self.prophetForecast.yhat_lower[-45:]),
+                    #fill='tonexty',
                     marker_color='lightblue',
                     name=self.stockName+' Forecast'),
                 row=scatterPlotRow, col=1)
@@ -374,30 +386,6 @@ class Stock(object) :
                         name='Negative Trend',    
                     ),
                 row=scatterPlotRow, col=1)
-
-        # # Suggested In/Out based on Trends
-        # fig.add_trace(
-        #     go.Scatter(
-        #         x=enterDaysTrend,
-        #         y=self.stockValue['Close'][enterDaysTrend],
-        #         mode="markers",
-        #         marker_color='blue',
-        #         marker_symbol=108,
-        #         name='Positive Trend',
-        #         marker_line_width=8
-        #     ),
-        # row=scatterPlotRow, col=1)
-        # fig.add_trace(
-        #     go.Scatter(
-        #         x=exitDaysTrend,
-        #         y=self.stockValue['Close'][exitDaysTrend],
-        #         mode="markers",
-        #         marker_color='#AF0038',
-        #         marker_symbol=107,
-        #         name='Negative Trend',
-        #         marker_line_width=8
-        #     ),
-        # row=scatterPlotRow, col=1)
 
 
         # Finishing touches
@@ -466,7 +454,7 @@ class Stock(object) :
         list
             Simple/Exponential Moving average of the last nDays
         """
-        limit = 360     # Number of backward steps
+        limit = min(len(self.stockValue['Close'])-nDays,360)     # Number of backward steps
         if kind == 'simple' :
             SMA = []
             for i in range(limit) :
@@ -493,6 +481,7 @@ class Stock(object) :
     def minMaxTrend_buylogic(self, daysToSubtract=180, windowSize=3) :
         trend = []
         # At each iteration compare the value with last Min and Max 
+        daysToSubtract = min(daysToSubtract, len(self.stockValue['Close']))
         for i in range(daysToSubtract) :
             lastMin = nearest_yesterday(self.dateMins, self.stockValue.iloc[-daysToSubtract+i].name)
             lastMax = nearest_yesterday(self.dateMaxs, self.stockValue.iloc[-daysToSubtract+i].name)
