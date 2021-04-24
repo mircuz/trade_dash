@@ -309,7 +309,7 @@ class Stock(object) :
                     x=days[-60:],
                     y=np.exp(self.prophetForecast_m30.yhat[-60:]),
                     name='Prophet t-30 Forecast',
-                    marker_color='orange',
+                    marker_color='lightcoral',
                     marker_line_width=1),
                 row=scatterPlotRow, col=1)
             # Line of the prediction
@@ -319,7 +319,7 @@ class Stock(object) :
                     x=days[-60:],
                     y=np.exp(self.prophetForecast.yhat)[-60:],
                     name='Prophet Today Forecast',
-                    marker_color='blue',
+                    marker_color='#3283FE',
                     marker_line_width=1),
                 row=scatterPlotRow, col=1)
             # Upper threshold of confidence
