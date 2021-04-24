@@ -1,6 +1,7 @@
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
+from datetime import date
 import os
 from .stockClass import Stock
 from .server import app
@@ -66,6 +67,12 @@ app.layout = html.Div([
                 id='ProphetToggle',
                 on=False,
                 color='lightblue',
+            ),
+            html.P('You could potentially gain xx between'),
+            dcc.DatePickerRange(
+                id='date-picker-range',
+                max_date_allowed=date.today(),
+                end_date=date.today()
             ),
         ]
     ),

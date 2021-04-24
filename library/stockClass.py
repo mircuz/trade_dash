@@ -301,11 +301,12 @@ class Stock(object) :
         # Forecast
         if Prophet == True :
             if self.prophetForecast.empty : self.prophetForecast, self.prophetForecast_m30 = prophet(self)
+            days = self.prophetForecast.ds.dt.date.array
             # Line of the prediction_m30
             fig.add_trace(
                 go.Scatter(
                     mode="lines",
-                    x=self.prophetForecast_m30.ds[-60:],
+                    x=days[-60:],
                     y=np.exp(self.prophetForecast_m30.yhat[-60:]),
                     name='Prophet t-30 Forecast',
                     marker_color='orange',
@@ -315,7 +316,7 @@ class Stock(object) :
             fig.add_trace(
                 go.Scatter(
                     mode="lines",
-                    x=self.prophetForecast.ds[-60:],
+                    x=days[-60:],
                     y=np.exp(self.prophetForecast.yhat)[-60:],
                     name='Prophet Today Forecast',
                     marker_color='blue',
@@ -325,8 +326,8 @@ class Stock(object) :
             fig.add_trace(
                 go.Scatter(
                     mode=None,
-                    x=self.prophetForecast.ds[-30:],
-                    y=np.exp(self.prophetForecast.yhat_upper[-30:]),
+                    x=days[-60:],
+                    y=np.exp(self.prophetForecast.yhat_upper[-60:]),
                     #fill=None,
                     marker_color='lightblue',
                     name=self.stockName+' Forecast'),
@@ -335,8 +336,8 @@ class Stock(object) :
             fig.add_trace(
                 go.Scatter(
                     mode=None,
-                    x=self.prophetForecast.ds[-45:],
-                    y=np.exp(self.prophetForecast.yhat_lower[-45:]),
+                    x=days[-60:],
+                    y=np.exp(self.prophetForecast.yhat_lower[-60:]),
                     #fill='tonexty',
                     marker_color='lightblue',
                     name=self.stockName+' Forecast'),
@@ -389,7 +390,6 @@ class Stock(object) :
 
 
         # Finishing touches
-        fig.update(layout_xaxis_rangeslider_visible=False)
         self.figHandler = self.layout_update(fig)
     
 
@@ -407,6 +407,7 @@ class Stock(object) :
         fig : Plotly figure handler
             Figure handler on which the properties have been applied
         """
+        fig.update(layout_xaxis_rangeslider_visible=False)
         fig.update_layout(
                 showlegend=False,
                 height=700,
