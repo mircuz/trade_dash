@@ -121,3 +121,28 @@ def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum,MACD,Forecast,Prophet) :
         return [stockMem.figHandler]
     else :
         return [dash.no_update]
+
+
+@app.callback(
+    [dash.dependencies.Output('textual_gain', 'children'),
+     dash.dependencies.Output('textual_gain', 'style')],
+    [dash.dependencies.Input('date_picker_range', 'start_date'),
+     dash.dependencies.Input('date_picker_range', 'end_date')])
+def update_output(start_date, end_date):
+    if ((start_date is not None) and (end_date is not None) and (stockMem.stockValue.empty is False)):
+        perc = stockMem.computePercentualGain(start_date, end_date)
+        if perc > 1.0 : 
+            return [
+                'Potential Gain is around ' + str(round(100*(perc-1),1)) + '%',
+                {'color':'green'}    
+            ]
+        else : 
+            return [
+                'Potential Loss is around ' + str(round(abs(100*(perc-1)),1)) + '%',
+                {'color':'red'}
+            ]
+    else:
+        return [
+            ['Select a period to compute rough income'],
+            {'color':'silver'}
+        ]

@@ -551,9 +551,6 @@ class Stock(object) :
         dminValues = derivative(minValues, schema='upwind', order='first') 
 
 
-
-
-
     def MA_buyLogic(self, first, second, timeHistory) :
         """
         In Out market logic based on Moving Average only
@@ -613,3 +610,13 @@ class Stock(object) :
             comp = comp[day.min():];  timeHistory = timeHistory[day.min():]
         
         return enterDay, exitDay, upsDate, positiveDiffs
+
+
+    def computePercentualGain(self,start,end) : 
+        array = self.stockValue.loc[start:end]['Close'].array
+        yesterday_perc = 1
+        for day in range(len(array)-1):
+            today_perc = 1 + (array[day+1] - array[day])/array[day]
+            today_perc*=yesterday_perc
+            yesterday_perc=today_perc
+        return today_perc

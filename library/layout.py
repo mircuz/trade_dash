@@ -68,11 +68,13 @@ app.layout = html.Div([
                 on=False,
                 color='lightblue',
             ),
-            html.P('You could potentially gain xx between'),
+            html.P(id='textual_gain'),
             dcc.DatePickerRange(
-                id='date-picker-range',
+                id='date_picker_range',
+                display_format='DD MMM YYYY',
                 max_date_allowed=date.today(),
-                end_date=date.today()
+                end_date=date.today(),
+                calendar_orientation='vertical',
             ),
         ]
     ),
