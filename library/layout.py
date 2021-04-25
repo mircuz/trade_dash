@@ -55,9 +55,9 @@ app.layout = html.Div([
                 color='#00BFFF',
             ),
             daq.BooleanSwitch(
-                label='ARIMA',
+                label='LSTM',
                 className='one columns',
-                id='ARIMAToggle',
+                id='LSTMToggle',
                 on=False,
                 color='lightcoral',
             ),

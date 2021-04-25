@@ -88,10 +88,10 @@ def updateStock(stockName) :
      Input('SMA200Toggle','on'),
      Input('MomentumToggle','on'),
      Input('MACDToggle','on'),
-     Input('ARIMAToggle','on'),
+     Input('LSTMToggle','on'),
      Input('ProphetToggle','on')]
     )
-def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum,MACD,Forecast,Prophet) :
+def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum,MACD,LSTM,Prophet) :
     """
     This routine is used to render the graph and act as interface 
     between the dashboard and the Stock class method updateGraphs 
@@ -117,7 +117,7 @@ def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum,MACD,Forecast,Prophet) :
         Figure which will be rendered
     """
     if stockMem.stockValue.empty is False :
-        stockMem.updateGraphs(EMA20,EMA50,SMA200,Momentum,MACD,Forecast,Prophet)
+        stockMem.updateGraphs(EMA20,EMA50,SMA200,Momentum,MACD,LSTM,Prophet)
         return [stockMem.figHandler]
     else :
         return [dash.no_update]

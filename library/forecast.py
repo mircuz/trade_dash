@@ -81,7 +81,7 @@ def lstm_initialization(tensorShape, unitsPerLayer=[50, 50, 50, 50], dropoutPerL
           # Adding the LSTM layer and Dropout regularisation
           # First Layer
           x=0
-          regressor.add(LSTM(units = unitsPerLayer[x], return_sequences = True, input_shape = (tensorShape, 1)))
+          regressor.add(LSTM(units = unitsPerLayer[x], return_sequences = True, input_shape = tensorShape))
           regressor.add(Dropout(dropoutPerLayer[x]))
           # Intermediate Layers
           for x in range(1,len(unitsPerLayer)-1) : 
@@ -89,7 +89,7 @@ def lstm_initialization(tensorShape, unitsPerLayer=[50, 50, 50, 50], dropoutPerL
                regressor.add(Dropout(dropoutPerLayer[x]))
           # Last Layer
           x+=1
-          regressor.add(LSTM(units = unitsPerLayer[x], return_sequences = True))
+          regressor.add(LSTM(units = unitsPerLayer[x]))
           regressor.add(Dropout(dropoutPerLayer[x]))
           regressor.add(Dense(units = 1))
 
@@ -105,7 +105,7 @@ def lstm(stock, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchS
      trainSet = stock.stockValue.iloc[:, 3:4]
      # Scale the dset
      sc = MinMaxScaler(feature_range = (0, 1))
-     scaledDF = sc.fit_transform(stock.stockValue)
+     scaledDF = sc.fit_transform(trainSet)
 
      # Creating a data structure with a window of timesteps and 1 output
      X_train = []
@@ -118,16 +118,18 @@ def lstm(stock, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchS
      X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
 
      # Train the Network
-     regressor = lstm_initialization(X_train.shape[1])
+     regressor = lstm_initialization((X_train.shape[1], 1))
      regressor.fit(X_train, y_train, epochs=epochs, batch_size=batchSize)
 
      # Prepare input for forecast
+     inputs = scaledDF[(int(len(scaledDF)*trainingSetDim) - historicalWindowSize):]
+     inputs = inputs.reshape(-1,1)
      X_test = []
-     for i in range(historicalWindowSize + int(len(scaledDF)*trainingSetDim), len(scaledDF)):
-          X_test.append(scaledDF[i-historicalWindowSize:i, 0])
+     for i in range(historicalWindowSize, len(inputs)):
+          X_test.append(inputs[i-historicalWindowSize:i, 0])
      X_test = np.array(X_test)
      X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
      # Forecast
      Y_test = regressor.predict(X_test)
      predicted_stock_price = sc.inverse_transform(Y_test)
-     return X_test, predicted_stock_price
+     return predicted_stock_price.flatten().tolist()

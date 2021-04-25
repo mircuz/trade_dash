@@ -80,7 +80,7 @@ class Stock(object) :
         self.figHandler = []
         
 
-    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum,MACD,ARIMA,Prophet) :
+    def updateGraphs(self,EMA20,EMA50,SMA200,Momentum,MACD,LSTM,Prophet) :
         """
         Update the graphs embeded in figHandler with the class attributes queried
 
@@ -265,14 +265,14 @@ class Stock(object) :
             enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_buyLogic(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.EMA50):].index) 
         
         # Forecast
-        if ARIMA == True :
-            X_forecast, Y_forecast = lstm(self)
+        if LSTM == True :
+            Y_forecast = lstm(self, epochs=10, trainingSetDim=0.85)
             #forecasted, lowerConfidence, upperConfidence = AutoARIMA(self)
             # Line
             fig.add_trace(
                 go.Scatter(
-                    mode="markers",
-                    x=X_forecast,
+                    mode="lines",
+                    x=self.stockValue['Close'][-len(Y_forecast):].index,
                     y=Y_forecast,
                     name='LSTM',
                     marker_color='lightcoral',
