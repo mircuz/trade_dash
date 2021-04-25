@@ -4,7 +4,7 @@ from plotly.subplots import make_subplots
 import yfinance as yf
 import numpy as np
 import pandas as pd
-from .forecast import AutoARIMA, prophet
+from .forecast import AutoARIMA, prophet, lstm
 from itertools import compress
 from datetime import datetime, timedelta
 from .utils import derivative, computeMinMax, nearest, nearest_yesterday, ColNum2ColName
@@ -145,7 +145,7 @@ class Stock(object) :
                         x=df['date'],
                         y=df['mom'],
                         marker=dict(
-                            color='silver',
+                            color='black',
                             size=1,
                             autocolorscale=True
                         ),
@@ -266,37 +266,38 @@ class Stock(object) :
         
         # Forecast
         if ARIMA == True :
-            forecasted, lowerConfidence, upperConfidence = AutoARIMA(self)
+            X_forecast, Y_forecast = lstm(self)
+            #forecasted, lowerConfidence, upperConfidence = AutoARIMA(self)
             # Line
             fig.add_trace(
                 go.Scatter(
                     mode="markers",
-                    x=forecasted.index,
-                    y=np.exp(forecasted.values),
-                    name=self.stockName + ' Forecast',
+                    x=X_forecast,
+                    y=Y_forecast,
+                    name='LSTM',
                     marker_color='lightcoral',
                     marker_line_width=1),
                 row=scatterPlotRow, col=1)
-            # Upper threshold of confidence
-            fig.add_trace(
-                go.Scatter(
-                    mode=None,
-                    x=upperConfidence.index,
-                    y=np.exp(upperConfidence.values),
-                    fill=None,
-                    marker_color='lightcoral',
-                    name=self.stockName+' Forecast'),
-                row=scatterPlotRow, col=1)
-            # Lower threshold of confidence
-            fig.add_trace(
-                go.Scatter(
-                    mode=None,
-                    x=lowerConfidence.index,
-                    y=np.exp(lowerConfidence.values),
-                    fill='tonexty',
-                    marker_color='lightcoral',
-                    name=self.stockName+' Forecast'),
-                row=scatterPlotRow, col=1)
+            # # Upper threshold of confidence
+            # fig.add_trace(
+            #     go.Scatter(
+            #         mode=None,
+            #         x=upperConfidence.index,
+            #         y=np.exp(upperConfidence.values),
+            #         fill=None,
+            #         marker_color='lightcoral',
+            #         name=self.stockName+' Forecast'),
+            #     row=scatterPlotRow, col=1)
+            # # Lower threshold of confidence
+            # # fig.add_trace(
+            #     go.Scatter(
+            #         mode=None,
+            #         x=lowerConfidence.index,
+            #         y=np.exp(lowerConfidence.values),
+            #         fill='tonexty',
+            #         marker_color='lightcoral',
+            #         name=self.stockName+' Forecast'),
+            #     row=scatterPlotRow, col=1)
 
         # Forecast
         if Prophet == True :

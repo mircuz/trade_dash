@@ -45,7 +45,7 @@ app.layout = html.Div([
                 className='one columns',
                 id='MomentumToggle',
                 on=False,
-                color='#C0C0C0',
+                color='black',
             ),
             daq.BooleanSwitch(
                 label='MACD',
