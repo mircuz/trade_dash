@@ -46,7 +46,7 @@ def AutoARIMA(stock) :
      model_predictions = fitted.get_forecast(steps=forecastedSteps)  
      forecasted_value = model_predictions.predicted_mean
      forecasted_series = pd.Series(forecasted_value.values, index=test_data.index[:forecastedSteps])
-     confidence = model_predictions.conf_int(alpha=0.15) # 85% confidence
+     confidence = model_predictions.conf_int(alpha=0.25) # 75% confidence
      lower_series = pd.Series(confidence['lower Close'].values, index=test_data.index[:forecastedSteps])
      upper_series = pd.Series(confidence['upper Close'].values, index=test_data.index[:forecastedSteps])
 
@@ -57,13 +57,13 @@ def AutoARIMA(stock) :
 def prophet(stock) :
      m = Prophet(daily_seasonality = False) # the Prophet class (model)
      m.fit(pd.DataFrame({'y': np.log(stock.stockValue['Close']), 'ds': stock.stockValue['Close'].index}))
-     future = m.make_future_dataframe(periods=30) #we need to specify the number of days in future
+     future = m.make_future_dataframe(periods=15) #we need to specify the number of days in future
      prediction = m.predict(future)
 
      # Prediction at t-30gg
      p = Prophet(daily_seasonality = False)
      p.fit(pd.DataFrame({'y': np.log(stock.stockValue['Close'][:-30]), 'ds': stock.stockValue['Close'][:-30].index}))
-     future_m30 = p.make_future_dataframe(periods=60) #we need to specify the number of days in future
+     future_m30 = p.make_future_dataframe(periods=45) #we need to specify the number of days in future
      prediction_m30 = p.predict(future_m30)
 
      return prediction, prediction_m30

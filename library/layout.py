@@ -13,7 +13,7 @@ app.layout = html.Div([
     html.H2("Prototype of an Advisoring Dashboard"),
     html.Div(className='row', children=[
             html.P(className='two columns', children="Enter the name of the Stock "),
-            dcc.Input(className='one columns', id='stockName', value='AAPL', type='text',debounce=True),
+            dcc.Input(className='one columns', id='stockName', value='ETH-USD', type='text',debounce=True),
     ]),
 
     html.Div(

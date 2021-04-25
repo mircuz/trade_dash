@@ -302,11 +302,12 @@ class Stock(object) :
         if Prophet == True :
             if self.prophetForecast.empty : self.prophetForecast, self.prophetForecast_m30 = prophet(self)
             days = self.prophetForecast.ds.dt.date.array
+            days_m30 = self.prophetForecast_m30.ds.dt.date.array
             # Line of the prediction_m30
             fig.add_trace(
                 go.Scatter(
                     mode="lines",
-                    x=days[-60:],
+                    x=days_m30[-60:],
                     y=np.exp(self.prophetForecast_m30.yhat[-60:]),
                     name='Prophet t-30 Forecast',
                     marker_color='lightcoral',
@@ -316,8 +317,8 @@ class Stock(object) :
             fig.add_trace(
                 go.Scatter(
                     mode="lines",
-                    x=days[-60:],
-                    y=np.exp(self.prophetForecast.yhat)[-60:],
+                    x=days[-45:],
+                    y=np.exp(self.prophetForecast.yhat)[-45:],
                     name='Prophet Today Forecast',
                     marker_color='#3283FE',
                     marker_line_width=1),
