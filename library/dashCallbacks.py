@@ -58,10 +58,16 @@ def updateStock(stockName) :
     if len(stockName)>0:
         globalStore(stockName)
         if stockMem.stockValue.empty is False :
-            return [
-                    [stockMem.stockTicker.info['shortName'] + ' Stocks'],
-                    False
-                ]
+            try : 
+                return [
+                        [stockMem.stockTicker.info['shortName'] + ' Stocks'],
+                        False
+                    ]
+            except :
+                return [
+                        [stockMem.stockTicker.ticker + ' Stocks'],
+                        False
+                    ]
         else :
             return [
                     dash.no_update,
@@ -81,9 +87,11 @@ def updateStock(stockName) :
      Input('EMA50Toggle','on'),
      Input('SMA200Toggle','on'),
      Input('MomentumToggle','on'),
-     Input('ForecastToggle','on')]
+     Input('MACDToggle','on'),
+     Input('ARIMAToggle','on'),
+     Input('ProphetToggle','on')]
     )
-def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum,Forecast) :
+def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum,MACD,Forecast,Prophet) :
     """
     This routine is used to render the graph and act as interface 
     between the dashboard and the Stock class method updateGraphs 
@@ -109,7 +117,32 @@ def updateGraph(stockName,EMA20,EMA50,SMA200,Momentum,Forecast) :
         Figure which will be rendered
     """
     if stockMem.stockValue.empty is False :
-        stockMem.updateGraphs(EMA20,EMA50,SMA200,Momentum,Forecast)
+        stockMem.updateGraphs(EMA20,EMA50,SMA200,Momentum,MACD,Forecast,Prophet)
         return [stockMem.figHandler]
     else :
         return [dash.no_update]
+
+
+@app.callback(
+    [dash.dependencies.Output('textual_gain', 'children'),
+     dash.dependencies.Output('textual_gain', 'style')],
+    [dash.dependencies.Input('date_picker_range', 'start_date'),
+     dash.dependencies.Input('date_picker_range', 'end_date')])
+def update_output(start_date, end_date):
+    if ((start_date is not None) and (end_date is not None) and (stockMem.stockValue.empty is False)):
+        perc = stockMem.computePercentualGain(start_date, end_date)
+        if perc > 1.0 : 
+            return [
+                'Potential Gain is around ' + str(round(100*(perc-1),1)) + '%',
+                {'color':'green'}    
+            ]
+        else : 
+            return [
+                'Potential Loss is around ' + str(round(abs(100*(perc-1)),1)) + '%',
+                {'color':'red'}
+            ]
+    else:
+        return [
+            ['Select a period to compute rough income'],
+            {'color':'silver'}
+        ]

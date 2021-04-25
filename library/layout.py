@@ -1,6 +1,7 @@
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
+from datetime import date
 import os
 from .stockClass import Stock
 from .server import app
@@ -12,7 +13,7 @@ app.layout = html.Div([
     html.H2("Prototype of an Advisoring Dashboard"),
     html.Div(className='row', children=[
             html.P(className='two columns', children="Enter the name of the Stock "),
-            dcc.Input(className='one columns', id='stockName', value='AAPL', type='text',debounce=True),
+            dcc.Input(className='one columns', id='stockName', value='ETH-USD', type='text',debounce=True),
     ]),
 
     html.Div(
@@ -44,14 +45,36 @@ app.layout = html.Div([
                 className='one columns',
                 id='MomentumToggle',
                 on=False,
-                color='#C0C0C0',
+                color='black',
+            ),
+            daq.BooleanSwitch(
+                label='MACD',
+                className='one columns',
+                id='MACDToggle',
+                on=False,
+                color='#00BFFF',
             ),
             daq.BooleanSwitch(
                 label='ARIMA',
                 className='one columns',
-                id='ForecastToggle',
+                id='ARIMAToggle',
                 on=False,
                 color='lightcoral',
+            ),
+            daq.BooleanSwitch(
+                label='Prophet',
+                className='one columns',
+                id='ProphetToggle',
+                on=False,
+                color='lightblue',
+            ),
+            html.P(id='textual_gain'),
+            dcc.DatePickerRange(
+                id='date_picker_range',
+                display_format='DD MMM YYYY',
+                max_date_allowed=date.today(),
+                end_date=date.today(),
+                calendar_orientation='vertical',
             ),
         ]
     ),
