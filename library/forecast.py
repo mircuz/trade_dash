@@ -115,14 +115,14 @@ def lstm(stock, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchS
      y_train = []
      for i in range(historicalWindowSize, int(len(scaledDF)*trainingSetDim)):
           X_train.append(scaledDF[i-historicalWindowSize:i, 0])   # <-- Si può pensare di espandere la matrice X con ulteriori dati come MACD, Volumes ed altro 2/3]
-          y_train.append(scaledDF[i, 0])
+          y_train.append(scaledDF[i+daysOfForecast-1, 0])         # <-- slide forecast
      X_train, y_train = np.array(X_train), np.array(y_train)
      # Reshaping
      X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
 
      # Train the Network
      regressor = lstm_initialization((X_train.shape[1], 1))
-     regressor.fit(X_train, y_train, epochs=epochs, batch_size=batchSize)
+     regressor.fit(X_train, y_train, epochs=epochs, batch_size=batchSize)  # <-- creare lo scivolamento su y_train
 
      # Prepare input for forecast
      inputs = scaledDF[(int(len(scaledDF)*trainingSetDim) - historicalWindowSize):]
