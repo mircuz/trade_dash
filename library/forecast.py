@@ -8,6 +8,7 @@ from fbprophet import Prophet
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout
+import datetime
 
 
 def decompose(stock) :
@@ -101,6 +102,8 @@ def lstm_initialization(tensorShape, unitsPerLayer=[50, 50, 50, 50], dropoutPerL
           print('Error: Units per Layer and Dropouts mismatch!')
 
 def lstm(stock, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=32) :
+     #TODO Provare con shift tra y_train e x_train di 5-10 giorni per effettuare previsioni 
+     daysOfForecast=1
      
      trainSet = stock.stockValue.iloc[:, 3:4]
      # Scale the dset
@@ -111,7 +114,7 @@ def lstm(stock, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchS
      X_train = []
      y_train = []
      for i in range(historicalWindowSize, int(len(scaledDF)*trainingSetDim)):
-          X_train.append(scaledDF[i-historicalWindowSize:i, 0])   # <-- Si può pensare di espandere la matrice X con ulteriori dati come MACD, Volumes ed altro
+          X_train.append(scaledDF[i-historicalWindowSize:i, 0])   # <-- Si può pensare di espandere la matrice X con ulteriori dati come MACD, Volumes ed altro 2/3]
           y_train.append(scaledDF[i, 0])
      X_train, y_train = np.array(X_train), np.array(y_train)
      # Reshaping
@@ -132,4 +135,8 @@ def lstm(stock, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchS
      # Forecast
      Y_test = regressor.predict(X_test)
      predicted_stock_price = sc.inverse_transform(Y_test)
-     return predicted_stock_price.flatten().tolist()
+
+     # Timeseries of forecast validity
+     valDays=stock.stockValue.index[-len(predicted_stock_price):]+datetime.timedelta(days=daysOfForecast)
+
+     return valDays, predicted_stock_price.flatten().tolist()

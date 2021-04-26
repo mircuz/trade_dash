@@ -77,6 +77,8 @@ class Stock(object) :
         self.dateMinsMACD=[]
         self.prophetForecast = pd.DataFrame()
         self.prophetForecast_m30 = pd.DataFrame()
+        self.LSTM_days  = []
+        self.LSTM_forecast=[]
         self.figHandler = []
         
 
@@ -266,14 +268,14 @@ class Stock(object) :
         
         # Forecast
         if LSTM == True :
-            Y_forecast = lstm(self, epochs=10, trainingSetDim=0.85)
+            if self.LSTM_forecast == [] : self.LSTM_days, self.LSTM_forecast = lstm(self, epochs=10, trainingSetDim=0.85)
             #forecasted, lowerConfidence, upperConfidence = AutoARIMA(self)
             # Line
             fig.add_trace(
                 go.Scatter(
                     mode="lines",
-                    x=self.stockValue['Close'][-len(Y_forecast):].index,
-                    y=Y_forecast,
+                    x=self.LSTM_days,
+                    y=self.LSTM_forecast,
                     name='LSTM',
                     marker_color='lightcoral',
                     marker_line_width=1),
