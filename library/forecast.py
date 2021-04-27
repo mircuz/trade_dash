@@ -101,10 +101,35 @@ def lstm_initialization(tensorShape, unitsPerLayer=[50, 50, 50, 50], dropoutPerL
      else: 
           print('Error: Units per Layer and Dropouts mismatch!')
 
-def lstm(stock, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=32) :
-     #TODO Provare con shift tra y_train e x_train di 5-10 giorni per effettuare previsioni 
-     daysOfForecast=1
-     
+def lstm(stock, daysOfForecast=5, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=32) :
+     """
+     [summary]
+
+     Parameters
+     ----------
+     stock : Stock
+         Stock Class object
+     daysOfForecast : int, optional
+         Describe the number of days of forecast, by default 5
+     trainingSetDim : float, optional
+         Describe the number of days used for training the Net, by default 0.85
+     historicalWindowSize : int, optional
+         Describe the widthness of the window used to
+         generate the forecast, by default are used last 60 days
+     epochs : int, optional
+         The epochs used ot train the LSTM, by default 100
+     batchSize : int, optional
+         The batchSize parameter of LSTM.
+         This value is used during the training to 
+         refine the parameters, by default 32
+
+     Returns
+     -------
+     valDays : np.array 
+          Contains the days of validity of the forecast
+     predicted_stock_price : np.array
+          Contains the forecasted values
+     """     
      trainSet = stock.stockValue.iloc[:, 3:4]
      # Scale the dset
      sc = MinMaxScaler(feature_range = (0, 1))
