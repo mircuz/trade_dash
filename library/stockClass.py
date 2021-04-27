@@ -64,7 +64,7 @@ class Stock(object) :
         """
         self.stockName = stockName
         self.stockTicker = yf.Ticker(self.stockName.upper())
-        self.stockValue = self.stockTicker.history(period='max',interval='1d',group_by='ticker') 
+        self.stockValue = self.stockTicker.history(period='5y',interval='1d',group_by='ticker') 
         self.momentum   = []
         self.momentumDerivative = []
         self.MACD       = []
@@ -240,7 +240,7 @@ class Stock(object) :
 
         # Suggested In/Out based on EMAs
         if trigger_20_50 == 1 :
-            enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA20):].index) 
+            enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA50):].index) 
             fig.add_trace(
                 go.Scatter(
                     x=enterDay_20_50,
@@ -264,7 +264,7 @@ class Stock(object) :
                 ),
             row=scatterPlotRow, col=1)
         if trigger_50_200 == 1 :
-            enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_buyLogic(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.EMA50):].index) 
+            enterDay_50_200, exitDay_50_200, upsDate_50_200, positiveDiffs_50_200 = self.MA_buyLogic(self.EMA50, self.SMA200, self.stockValue['Close'][-len(self.SMA200):].index) 
         
         # Forecast
         if LSTM == True :
@@ -442,7 +442,7 @@ class Stock(object) :
         self.momentumDerivative = derivative(self.momentum, schema='upwind', order='first')
 
 
-    def computeMA(self,nDays=20,kind='simple') :
+    def computeMA(self,nDays=20,kind='simple',limiter=None) :
         """
         Compute Moving averages
 
@@ -453,13 +453,18 @@ class Stock(object) :
         kind : str, optional
             Specify if moving average is simple ('simple') or exponential ('exp'), 
             by default 'simple'
+        limiter : int, optional
+            Define the limit of backward steps, by default is None
 
         Returns
         -------
         list
             Simple/Exponential Moving average of the last nDays
         """
-        limit = min(len(self.stockValue['Close'])-nDays,360)     # Number of backward steps
+        # Number of backward steps
+        if limiter != None : limit = min(len(self.stockValue['Close'])-nDays,limiter)     
+        else : limit = len(self.stockValue['Close'])-nDays
+
         if kind == 'simple' :
             SMA = []
             for i in range(limit) :
@@ -478,7 +483,7 @@ class Stock(object) :
         shortTerm = self.computeMA(nDays=nDays[0])
         longTerm = self.computeMA(nDays=nDays[1])
         MACD = []
-        for i in range(len(shortTerm)) :
+        for i in range(len(longTerm)) :
             MACD.append(shortTerm[i] - longTerm[i])
         return MACD
 

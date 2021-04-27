@@ -101,7 +101,7 @@ def lstm_initialization(tensorShape, unitsPerLayer=[128, 84, 16, 8], dropoutPerL
      else: 
           print('Error: Units per Layer and Dropouts mismatch!')
 
-def lstm(stock, daysOfForecast=1, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=32) :
+def lstm(stock, daysOfForecast=1, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=5) :
      """
      [summary]
 
