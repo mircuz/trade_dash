@@ -268,7 +268,7 @@ class Stock(object) :
         
         # Forecast
         if LSTM == True :
-            if self.LSTM_forecast == [] : self.LSTM_days, self.LSTM_forecast = lstm(self, epochs=20, trainingSetDim=0.85)
+            if self.LSTM_forecast == [] : self.LSTM_days, self.LSTM_forecast = lstm(self, epochs=10, trainingSetDim=0.85)
             #forecasted, lowerConfidence, upperConfidence = AutoARIMA(self)
             # Line
             fig.add_trace(

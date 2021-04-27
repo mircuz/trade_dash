@@ -73,7 +73,7 @@ def prophet(stock) :
      return prediction, prediction_m30
 
 
-def lstm_initialization(tensorShape, unitsPerLayer=[50, 50, 50, 50], dropoutPerLayer=[0.2, 0.2, 0.2, 0.2]) :
+def lstm_initialization(tensorShape, unitsPerLayer=[128, 84, 16, 8], dropoutPerLayer=[0.2, 0.15, 0.15, 0.1]) :
 
      if len(unitsPerLayer) == len(dropoutPerLayer) :
           # Initialising the RNN
@@ -101,7 +101,7 @@ def lstm_initialization(tensorShape, unitsPerLayer=[50, 50, 50, 50], dropoutPerL
      else: 
           print('Error: Units per Layer and Dropouts mismatch!')
 
-def lstm(stock, daysOfForecast=5, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=32) :
+def lstm(stock, daysOfForecast=1, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=32) :
      """
      [summary]
 
@@ -130,7 +130,9 @@ def lstm(stock, daysOfForecast=5, trainingSetDim=0.85, historicalWindowSize=60, 
      predicted_stock_price : np.array
           Contains the forecasted values
      """     
-     trainSet = stock.stockValue.iloc[:, 3:4]
+     trainSet = stock.stockValue.iloc[:, 0:5]
+     featuresCount = len(trainSet.iloc[0])
+     closeColumnIdx = 3
      # Scale the dset
      sc = MinMaxScaler(feature_range = (0, 1))
      scaledDF = sc.fit_transform(trainSet)
@@ -139,29 +141,35 @@ def lstm(stock, daysOfForecast=5, trainingSetDim=0.85, historicalWindowSize=60, 
      X_train = []
      y_train = []
      for i in range(historicalWindowSize, int(len(scaledDF)*trainingSetDim)):
-          X_train.append(scaledDF[i-historicalWindowSize:i, 0])   # <-- Si può pensare di espandere la matrice X con ulteriori dati come MACD, Volumes ed altro 2/3]
-          y_train.append(scaledDF[i+daysOfForecast-1, 0])         # <-- slide forecast
+          X_train.append(scaledDF[i-historicalWindowSize:i, :])   # <-- Up to now just yfinance data, need integration with indicators
+          y_train.append(scaledDF[i+daysOfForecast-1, closeColumnIdx])  
      X_train, y_train = np.array(X_train), np.array(y_train)
      # Reshaping
-     X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+     X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], featuresCount))
 
      # Train the Network
-     regressor = lstm_initialization((X_train.shape[1], 1))
+     regressor = lstm_initialization((X_train.shape[1], featuresCount))
      regressor.fit(X_train, y_train, epochs=epochs, batch_size=batchSize)  # <-- creare lo scivolamento su y_train
 
      # Prepare input for forecast
      inputs = scaledDF[(int(len(scaledDF)*trainingSetDim) - historicalWindowSize):]
-     inputs = inputs.reshape(-1,1)
+     #inputs = inputs.reshape(-1,1)
      X_test = []
      for i in range(historicalWindowSize, len(inputs)):
-          X_test.append(inputs[i-historicalWindowSize:i, 0])
+          X_test.append(inputs[i-historicalWindowSize:i, :])
      X_test = np.array(X_test)
-     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], featuresCount))
      # Forecast
      Y_test = regressor.predict(X_test)
-     predicted_stock_price = sc.inverse_transform(Y_test)
 
+     # Get something which has as many features as dataset
+     predict_extended = np.zeros((len(Y_test), featuresCount))
+     # Put the predictions there
+     predict_extended[:,closeColumnIdx] = Y_test.flatten()
+     # Inverse transform it and select the 3rd column.
+     predicted_stock_price = sc.inverse_transform(predict_extended)[:,closeColumnIdx]
+     
      # Timeseries of forecast validity
      valDays=stock.stockValue.index[-len(predicted_stock_price):]+datetime.timedelta(days=daysOfForecast)
 
-     return valDays, predicted_stock_price.flatten().tolist()
+     return valDays, predicted_stock_price
