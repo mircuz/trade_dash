@@ -73,7 +73,7 @@ def prophet(stock) :
      return prediction, prediction_m30
 
 
-def lstm_initialization(tensorShape, unitsPerLayer=[128, 84, 16, 8], dropoutPerLayer=[0.2, 0.15, 0.15, 0.1]) :
+def lstm_initialization(tensorShape, unitsPerLayer=[128, 64, 16], dropoutPerLayer=[0.2, 0.1, 0.1]) :
 
      if len(unitsPerLayer) == len(dropoutPerLayer) :
           # Initialising the RNN
@@ -101,7 +101,7 @@ def lstm_initialization(tensorShape, unitsPerLayer=[128, 84, 16, 8], dropoutPerL
      else: 
           print('Error: Units per Layer and Dropouts mismatch!')
 
-def lstm(stock, daysOfForecast=1, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=5) :
+def lstm(stock, daysOfForecast=1, trainingSetDim=0.85, historicalWindowSize=60, epochs=100, batchSize=3) :
      """
      [summary]
 
@@ -130,7 +130,15 @@ def lstm(stock, daysOfForecast=1, trainingSetDim=0.85, historicalWindowSize=60, 
      predicted_stock_price : np.array
           Contains the forecasted values
      """     
-     trainSet = stock.stockValue.iloc[:, 0:5]
+     if stock.MACD == [] :
+          stock.MACD = stock.computeMACD()
+     minDim = min(len(stock.momentum), len(stock.MACD), len(stock.EMA50), len(stock.EMA20))
+     trainSet = stock.stockValue.iloc[-minDim:, 0:5].reset_index(drop=True)
+          .join(pd.DataFrame(stock.MACD[-minDim:], columns=['MACD']))\
+          .join(pd.DataFrame(stock.momentum[-minDim:], columns=['Momentum']))\
+          .join(pd.DataFrame(stock.EMA20, columns=['EMA20']))\
+          .join(pd.DataFrame(stock.EMA50, columns=['EMA50']))\
+
      featuresCount = len(trainSet.iloc[0])
      closeColumnIdx = 3
      # Scale the dset
