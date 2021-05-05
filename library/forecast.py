@@ -9,6 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout
 import datetime
+from scipy.fft import dct, idct
 
 
 def decompose(stock) :
@@ -133,7 +134,7 @@ def lstm(stock, daysOfForecast=1, trainingSetDim=0.85, historicalWindowSize=60, 
      if stock.MACD == [] :
           stock.MACD = stock.computeMACD()
      minDim = min(len(stock.momentum), len(stock.MACD), len(stock.EMA50), len(stock.EMA20))
-     trainSet = stock.stockValue.iloc[-minDim:, 0:5].reset_index(drop=True)
+     trainSet = stock.stockValue.iloc[-minDim:, 0:5].reset_index(drop=True)\
           .join(pd.DataFrame(stock.MACD[-minDim:], columns=['MACD']))\
           .join(pd.DataFrame(stock.momentum[-minDim:], columns=['Momentum']))\
           .join(pd.DataFrame(stock.EMA20, columns=['EMA20']))\
