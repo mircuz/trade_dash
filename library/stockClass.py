@@ -240,7 +240,7 @@ class Stock(object) :
 
         # Suggested In/Out based on EMAs
         if trigger_20_50 == 1 :
-            enterDay_20_50, exitDay_20_50, upsDate_20_50, positiveDiffs_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA50):].index) 
+            enterDay_20_50, exitDay_20_50 = self.MA_buyLogic(self.EMA20, self.EMA50, self.stockValue['Close'][-len(self.EMA50):].index) 
             fig.add_trace(
                 go.Scatter(
                     x=enterDay_20_50,
@@ -595,30 +595,30 @@ class Stock(object) :
         # Of the difference takes only the positive indexes
         for i in difference :
             comp.append(i>0)
-        # Timestamp of the positive differences
-        upsDate = timeHistory[comp]
-        # Optional deltas between values to get better looking viz
-        positiveDiffs = list(compress(difference, comp))
-        # Compute best entry and exit from the market
-        enterDay = [];  exitDay = []
-        while comp != [] :
-            # Compute the first day in which we had positive delta
-            day = np.argwhere(np.array(comp)==True)
-            if day.shape[0] == 0 : 
-                break
-            enterDay.append(timeHistory[day.min()])
-            # Reduce the size of the array by discarding values before the enterDay
-            comp = comp[day.min():];  timeHistory = timeHistory[day.min():]
 
-            # Compute the first day in which we had negative delta
-            day = np.argwhere(np.array(comp)==False)
-            if day.shape[0] == 0 : 
-                break
-            exitDay.append(timeHistory[day.min()])
-            # Reduce the size of the array by discarding values before the exitDay
-            comp = comp[day.min():];  timeHistory = timeHistory[day.min():]
+        # Create label list to define segments
+        labelNumber = 1;    label = ColNum2ColName(labelNumber)
+        labelArray = [label]
+        for i in range(1,len(comp)):
+            if comp[i] == comp[i-1] : 
+                labelArray.append(label)
+            else : 
+                labelNumber += 1
+                label = ColNum2ColName(labelNumber)
+                labelArray.append(label)
+
+        enterDay = [];  exitDay = []
+        df = pd.DataFrame(data = list(zip(difference, timeHistory, comp, labelArray)), columns= ['difference', 'day', 'flagPositivity', 'label'])
+        for l in labelArray :
+            tempDf = df[
+                (df['flagPositivity'] == 1) &
+                (df['label'] == l)
+            ]
+            if not tempDf.empty :
+                enterDay.append(tempDf['day'].iloc[0])
+                exitDay.append(tempDf['day'].iloc[-1])
         
-        return enterDay, exitDay, upsDate, positiveDiffs
+        return enterDay, exitDay
 
 
     def computePercentualGain(self,start,end) : 
