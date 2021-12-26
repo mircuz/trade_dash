@@ -1,4 +1,4 @@
-from library.layout import app
+from src.layout import app
 
 
 # MAIN
