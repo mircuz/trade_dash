@@ -1,7 +1,7 @@
 from src.layout import app
 from waitress import serve
 
-DEBUG_STATUS = False
+DEBUG_STATUS = True
 
 # MAIN
 if __name__ == '__main__':

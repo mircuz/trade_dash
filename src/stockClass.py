@@ -53,7 +53,7 @@ class Stock(object) :
         Compute Moving Average
     """
 
-    def __init__(self,stockName) :
+    def __init__(self,stockName,lib='yahoo') :
         """
         Stock Constructor
 
