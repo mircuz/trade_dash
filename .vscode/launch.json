@@ -1,12 +1,6 @@
 {
     "configurations": [
         {
-            "name": "Python: Modulo",
-            "type": "python",
-            "request": "launch",
-            "module": "dashboard.py"
-        },
-        {
             "name": "Python: File corrente",
             "type": "python",
             "request": "launch",
