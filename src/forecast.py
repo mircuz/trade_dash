@@ -4,7 +4,7 @@ from pmdarima.arima import auto_arima
 from matplotlib import pyplot as plt 
 import numpy as np
 import pandas as pd
-from fbprophet import Prophet
+#from fbprophet import Prophet
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout
