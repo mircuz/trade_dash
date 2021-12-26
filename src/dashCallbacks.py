@@ -1,4 +1,4 @@
-from .server import app, cache
+from .server import app, cache, TIMEOUT_CACHE
 from .stockClass import Stock
 import dash
 from dash.dependencies import Input, Output, State
@@ -7,7 +7,7 @@ from dash.dependencies import Input, Output, State
 # Setup the Stock object into the cache
 stockMem = []
 
-@cache.memoize()
+@cache.memoize(timeout=TIMEOUT_CACHE)
 def globalStore(name) :
     """
     Used to cache the stock
