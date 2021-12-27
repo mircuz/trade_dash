@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 import os
 from pyalgotrade.feed.csvfeed import Feed
-from pyalgotrade.bar import Frequency
+import pyalgotrade.dataseries
+import pyalgotrade.technical
 from .forecast import AutoARIMA, prophet, lstm
 from itertools import compress
 from datetime import datetime, timedelta
@@ -25,18 +26,8 @@ class Stock(object) :
         Name of the stock we want to investigate
     stockTicker : yfinance object
         Yahoo finance object which collect informations from the web
-    stockValue : DataFrame
+    data : DataFrame
         DataFrame which collect the value of the stock splitted in Open, Close, Low and High
-    momentum : DataFrame
-        Dataframe representing the momentum index
-    EMA20 : Array
-        Array representing the exponential moving average of the last 20 days
-    EMA50 : Array
-        Array representing the exponential moving average of the last 50 days
-    SMA200 : Array
-        Array representing the simple moving average of the last 200 days
-    figHandler : Plotly figure
-        Handler to the figure
 
 
     Methods
@@ -46,18 +37,9 @@ class Stock(object) :
     
     layout_update(fig)
         Update the figure handler to fit better the screen
-
-    computeMinMax()
-        Compute local Maximum and Minimum 
-
-    computeMomentum(nDays=15)
-        Compute Momentum
-    
-    computeMA(nDays=20,kind='simple')
-        Compute Moving Average
     """
 
-    def __init__(self,stockName, period_inspected, timeframe, lib='yahoo') :
+    def __init__(self,stockName, period_inspected, timeframe, provider='yahoo') :
         """
         Stock Constructor
 
@@ -65,24 +47,31 @@ class Stock(object) :
         ----------
         stockName : str
             Name of the stock to investigate
+
+        period_inspected : str
+            Length of the timeseries
+
+        timeframe : str
+            Time window of each bar
         """
         self.stockName = stockName.upper()
-        if lib=='yahoo':
+        if provider=='yahoo':
             self.stockTicker = yf.Ticker(self.stockName)
-            self.stockValue = self.stockTicker.history(
+            self.stockTicker.history(
                 period=period_inspected, 
                 interval=timeframe, 
                 group_by='ticker')\
                 .to_csv('tickerDump.csv')
             self.data = Feed('Datetime', "%Y-%m-%d %H:%M:%S%z")
 
-        elif lib=='binance':
+        elif provider=='binance':
             self.stockTicker=None
-            self.stockValue=None
             self.data=None
         
         self.data.addValuesFromCSV('tickerDump.csv')
         if os.path.exists("demofile.txt"): os.remove("demofile.txt")
+        self.DataSeries = self.data.createDataSeries(self.data.getKeys(), self.data._BaseFeed__maxLen) 
+        self.stockValue = self.data._MemFeed__values
 
         self.figHandler = []
         
@@ -431,176 +420,176 @@ class Stock(object) :
         return fig
 
 
-    def computeMomentum(self,nDays=14) :
-        """
-        Compute Momentum (Rate of Change) and its derivative
+    # def computeMomentum(self,nDays=14) :
+    #     """
+    #     Compute Momentum (Rate of Change) and its derivative
 
-        Parameters
-        ----------
-        nDays : int, optional
-            Days used to compute the momentum, by default 14
-        """
-        Mom = []
-        for days in range(nDays,len(self.stockValue['Close'].array)) :
-            Mom.append(100*(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])/self.stockValue['Close'].array[days-nDays])
-        self.momentum = Mom
-        self.momentumDerivative = derivative(self.momentum, schema='upwind', order='first')
-
-
-    def computeMA(self,nDays=20,kind='simple',limiter=None) :
-        """
-        Compute Moving averages
-
-        Parameters
-        ----------
-        nDays : int, optional
-            Days used to compute the moving average, by default 20
-        kind : str, optional
-            Specify if moving average is simple ('simple') or exponential ('exp'), 
-            by default 'simple'
-        limiter : int, optional
-            Define the limit of backward steps, by default is None
-
-        Returns
-        -------
-        list
-            Simple/Exponential Moving average of the last nDays
-        """
-        # Number of backward steps
-        if limiter != None : limit = min(len(self.stockValue['Close'])-nDays,limiter)     
-        else : limit = len(self.stockValue['Close'])-nDays
-
-        if kind == 'simple' :
-            SMA = []
-            for i in range(limit) :
-                SMA.append((1/nDays)*sum(self.stockValue['Close'].array[np.arange(-i-nDays,-i)]))
-            SMA.reverse()
-            return SMA
-        if kind == 'exp' :
-            EMA = [(1/nDays)*sum(self.stockValue['Close'].array[-limit:-limit+nDays])]
-            K = 2/(nDays+1)
-            for i in range(1,limit) :
-                EMA.append(K* (self.stockValue['Close'].array[-limit-nDays+i] - EMA[i-1]) + EMA[i-1])
-            return EMA
+    #     Parameters
+    #     ----------
+    #     nDays : int, optional
+    #         Days used to compute the momentum, by default 14
+    #     """
+    #     Mom = []
+    #     for days in range(nDays,len(self.stockValue['Close'].array)) :
+    #         Mom.append(100*(self.stockValue['Close'].array[days] - self.stockValue['Close'].array[days-nDays])/self.stockValue['Close'].array[days-nDays])
+    #     self.momentum = Mom
+    #     self.momentumDerivative = derivative(self.momentum, schema='upwind', order='first')
 
 
-    def computeMACD(self,nDays=[3,10]) :
-        shortTerm = self.computeMA(nDays=nDays[0])
-        longTerm = self.computeMA(nDays=nDays[1])
-        MACD = []
-        for i in range(len(longTerm)) :
-            MACD.append(shortTerm[i] - longTerm[i])
-        return MACD
+    # def computeMA(self,nDays=20,kind='simple',limiter=None) :
+    #     """
+    #     Compute Moving averages
+
+    #     Parameters
+    #     ----------
+    #     nDays : int, optional
+    #         Days used to compute the moving average, by default 20
+    #     kind : str, optional
+    #         Specify if moving average is simple ('simple') or exponential ('exp'), 
+    #         by default 'simple'
+    #     limiter : int, optional
+    #         Define the limit of backward steps, by default is None
+
+    #     Returns
+    #     -------
+    #     list
+    #         Simple/Exponential Moving average of the last nDays
+    #     """
+    #     # Number of backward steps
+    #     if limiter != None : limit = min(len(self.stockValue['Close'])-nDays,limiter)     
+    #     else : limit = len(self.stockValue['Close'])-nDays
+
+    #     if kind == 'simple' :
+    #         SMA = []
+    #         for i in range(limit) :
+    #             SMA.append((1/nDays)*sum(self.stockValue['Close'].array[np.arange(-i-nDays,-i)]))
+    #         SMA.reverse()
+    #         return SMA
+    #     if kind == 'exp' :
+    #         EMA = [(1/nDays)*sum(self.stockValue['Close'].array[-limit:-limit+nDays])]
+    #         K = 2/(nDays+1)
+    #         for i in range(1,limit) :
+    #             EMA.append(K* (self.stockValue['Close'].array[-limit-nDays+i] - EMA[i-1]) + EMA[i-1])
+    #         return EMA
 
 
-    def minMaxTrend_buylogic(self, daysToSubtract=180, windowSize=3) :
-        trend = []
-        # At each iteration compare the value with last Min and Max 
-        daysToSubtract = min(daysToSubtract, len(self.stockValue['Close']))
-        for i in range(daysToSubtract) :
-            lastMin = nearest_yesterday(self.dateMins, self.stockValue.iloc[-daysToSubtract+i].name)
-            lastMax = nearest_yesterday(self.dateMaxs, self.stockValue.iloc[-daysToSubtract+i].name)
-            if (lastMax == []) or (lastMin == []) : continue
-            if self.stockValue['Close'][-daysToSubtract+i] > self.stockValue['Close'][lastMax] :
-                trend.append((self.stockValue.iloc[-daysToSubtract+i].name,1))
-            elif self.stockValue['Close'][-daysToSubtract+i] < self.stockValue['Close'][lastMin] :
-                trend.append((self.stockValue.iloc[-daysToSubtract+i].name,-1))
-            else :
-                trend.append((self.stockValue.iloc[-daysToSubtract+i].name,0))
+    # def computeMACD(self,nDays=[3,10]) :
+    #     shortTerm = self.computeMA(nDays=nDays[0])
+    #     longTerm = self.computeMA(nDays=nDays[1])
+    #     MACD = []
+    #     for i in range(len(longTerm)) :
+    #         MACD.append(shortTerm[i] - longTerm[i])
+    #     return MACD
 
 
-        # Count trends in a window
-        weightedTrend = pd.DataFrame(columns=['Date','UpTrend','DownTrend'])
-        labelN = 1
-        label = ColNum2ColName(labelN)
-        for i in range(windowSize, len(trend)) :
-            # If at least 70% of points says it is a positive trend append as positive
-            if [x[1] for x in trend[i-windowSize:i]].count(1) >= int(0.6*windowSize) : 
-                toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'UpTrend':[label]})
-                weightedTrend = weightedTrend.append(toAppend)
-            # Otherwise if 70% of points says it is a negative trend then append as negative
-            elif [x[1] for x in trend[i-windowSize:i]].count(-1) >= int(0.6*windowSize) : 
-                toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'DownTrend':[label]})
-                weightedTrend = weightedTrend.append(toAppend)
-            # Else skip
-            else :
-                labelN +=1
-                label = ColNum2ColName(labelN)
-        labels = weightedTrend['UpTrend'].dropna().unique().tolist()
-        enterDays = [];     exitDays = []
-        for label in labels :
-            if len(weightedTrend[weightedTrend['UpTrend'] == label]) < 4 : continue
-            enterDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[0])
-            exitDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[-1])
-        return weightedTrend, enterDays, exitDays
+    # def minMaxTrend_buylogic(self, daysToSubtract=180, windowSize=3) :
+    #     trend = []
+    #     # At each iteration compare the value with last Min and Max 
+    #     daysToSubtract = min(daysToSubtract, len(self.stockValue['Close']))
+    #     for i in range(daysToSubtract) :
+    #         lastMin = nearest_yesterday(self.dateMins, self.stockValue.iloc[-daysToSubtract+i].name)
+    #         lastMax = nearest_yesterday(self.dateMaxs, self.stockValue.iloc[-daysToSubtract+i].name)
+    #         if (lastMax == []) or (lastMin == []) : continue
+    #         if self.stockValue['Close'][-daysToSubtract+i] > self.stockValue['Close'][lastMax] :
+    #             trend.append((self.stockValue.iloc[-daysToSubtract+i].name,1))
+    #         elif self.stockValue['Close'][-daysToSubtract+i] < self.stockValue['Close'][lastMin] :
+    #             trend.append((self.stockValue.iloc[-daysToSubtract+i].name,-1))
+    #         else :
+    #             trend.append((self.stockValue.iloc[-daysToSubtract+i].name,0))
 
 
-    def MA_buyLogic(self, first, second, timeHistory) :
-        """
-        In Out market logic based on Moving Average only
-        It will advice to buy when the first MA is above the second MA, typically 
-        we use EMA20 as first and EMA50 as second
+    #     # Count trends in a window
+    #     weightedTrend = pd.DataFrame(columns=['Date','UpTrend','DownTrend'])
+    #     labelN = 1
+    #     label = ColNum2ColName(labelN)
+    #     for i in range(windowSize, len(trend)) :
+    #         # If at least 70% of points says it is a positive trend append as positive
+    #         if [x[1] for x in trend[i-windowSize:i]].count(1) >= int(0.6*windowSize) : 
+    #             toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'UpTrend':[label]})
+    #             weightedTrend = weightedTrend.append(toAppend)
+    #         # Otherwise if 70% of points says it is a negative trend then append as negative
+    #         elif [x[1] for x in trend[i-windowSize:i]].count(-1) >= int(0.6*windowSize) : 
+    #             toAppend = pd.DataFrame.from_dict({'Date':[trend[i][0]], 'DownTrend':[label]})
+    #             weightedTrend = weightedTrend.append(toAppend)
+    #         # Else skip
+    #         else :
+    #             labelN +=1
+    #             label = ColNum2ColName(labelN)
+    #     labels = weightedTrend['UpTrend'].dropna().unique().tolist()
+    #     enterDays = [];     exitDays = []
+    #     for label in labels :
+    #         if len(weightedTrend[weightedTrend['UpTrend'] == label]) < 4 : continue
+    #         enterDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[0])
+    #         exitDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[-1])
+    #     return weightedTrend, enterDays, exitDays
 
-        Parameters
-        ----------
-        first : array
-            moving average self object
-        second : array
-            moving average self object
-        timeHistory : array.index
-            indexes of the values which define the perimeter of the array
 
-        Returns
-        -------
-        enterDay
-            Days in which buy is wise (Delta >0)
-        exitDay
-            Days in which sell is wise (Delta <0)
-        upsDate
-            List of timestamps of positive deltas
-        positiveDiffs
-            List of values of the positive deltas
-        """        
-        # Delta first vs second positive => ascending trend
-        zipped = zip(first, second[-len(first):])
-        difference = [];    comp = []
-        # Compute difference between two indexees
-        for i, j in zipped :
-            difference.append(i-j) 
-        # Of the difference takes only the positive indexes
-        for i in difference :
-            comp.append(i>0)
+    # def MA_buyLogic(self, first, second, timeHistory) :
+    #     """
+    #     In Out market logic based on Moving Average only
+    #     It will advice to buy when the first MA is above the second MA, typically 
+    #     we use EMA20 as first and EMA50 as second
 
-        # Create label list to define segments
-        labelNumber = 1;    label = ColNum2ColName(labelNumber)
-        labelArray = [label]
-        for i in range(1,len(comp)):
-            if comp[i] == comp[i-1] : 
-                labelArray.append(label)
-            else : 
-                labelNumber += 1
-                label = ColNum2ColName(labelNumber)
-                labelArray.append(label)
+    #     Parameters
+    #     ----------
+    #     first : array
+    #         moving average self object
+    #     second : array
+    #         moving average self object
+    #     timeHistory : array.index
+    #         indexes of the values which define the perimeter of the array
 
-        enterDay = [];  exitDay = []
-        df = pd.DataFrame(data = list(zip(difference, timeHistory, comp, labelArray)), columns= ['difference', 'day', 'flagPositivity', 'label'])
-        for l in labelArray :
-            tempDf = df[
-                (df['flagPositivity'] == 1) &
-                (df['label'] == l)
-            ]
-            if not tempDf.empty :
-                enterDay.append(tempDf['day'].iloc[0])
-                exitDay.append(tempDf['day'].iloc[-1])
+    #     Returns
+    #     -------
+    #     enterDay
+    #         Days in which buy is wise (Delta >0)
+    #     exitDay
+    #         Days in which sell is wise (Delta <0)
+    #     upsDate
+    #         List of timestamps of positive deltas
+    #     positiveDiffs
+    #         List of values of the positive deltas
+    #     """        
+    #     # Delta first vs second positive => ascending trend
+    #     zipped = zip(first, second[-len(first):])
+    #     difference = [];    comp = []
+    #     # Compute difference between two indexees
+    #     for i, j in zipped :
+    #         difference.append(i-j) 
+    #     # Of the difference takes only the positive indexes
+    #     for i in difference :
+    #         comp.append(i>0)
+
+    #     # Create label list to define segments
+    #     labelNumber = 1;    label = ColNum2ColName(labelNumber)
+    #     labelArray = [label]
+    #     for i in range(1,len(comp)):
+    #         if comp[i] == comp[i-1] : 
+    #             labelArray.append(label)
+    #         else : 
+    #             labelNumber += 1
+    #             label = ColNum2ColName(labelNumber)
+    #             labelArray.append(label)
+
+    #     enterDay = [];  exitDay = []
+    #     df = pd.DataFrame(data = list(zip(difference, timeHistory, comp, labelArray)), columns= ['difference', 'day', 'flagPositivity', 'label'])
+    #     for l in labelArray :
+    #         tempDf = df[
+    #             (df['flagPositivity'] == 1) &
+    #             (df['label'] == l)
+    #         ]
+    #         if not tempDf.empty :
+    #             enterDay.append(tempDf['day'].iloc[0])
+    #             exitDay.append(tempDf['day'].iloc[-1])
         
-        return enterDay, exitDay
+    #     return enterDay, exitDay
 
 
-    def computePercentualGain(self,start,end) : 
-        array = self.stockValue.loc[start:end]['Close'].array
-        yesterday_perc = 1
-        for day in range(len(array)-1):
-            today_perc = 1 + (array[day+1] - array[day])/array[day]
-            today_perc*=yesterday_perc
-            yesterday_perc=today_perc
-        return today_perc
+    # def computePercentualGain(self,start,end) : 
+    #     array = self.stockValue.loc[start:end]['Close'].array
+    #     yesterday_perc = 1
+    #     for day in range(len(array)-1):
+    #         today_perc = 1 + (array[day+1] - array[day])/array[day]
+    #         today_perc*=yesterday_perc
+    #         yesterday_perc=today_perc
+    #     return today_perc
