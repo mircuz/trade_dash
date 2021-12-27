@@ -68,11 +68,17 @@ class Stock(object) :
             self.stockTicker=None
             self.data=None
         
+        # Load Data
         self.data.addValuesFromCSV('tickerDump.csv')
-        if os.path.exists("demofile.txt"): os.remove("demofile.txt")
+        if os.path.exists("tickerDump.csv"): os.remove("tickerDump.csv")
+        # Create dataseries
         self.DataSeries = self.data.createDataSeries(self.data.getKeys(), self.data._BaseFeed__maxLen) 
-        self.stockValue = self.data._MemFeed__values
-
+        # Extract data for plots
+        df = pd.DataFrame(self.data._MemFeed__values, columns=['Datetime', 'features'])
+        self.stockValue = pd.DataFrame(df['Datetime'])
+        for key in self.data.getKeys(): 
+            feature = [d.get(key) for d in df.iloc[:]['features']]
+            self.stockValue[key] = feature
         self.figHandler = []
         
 

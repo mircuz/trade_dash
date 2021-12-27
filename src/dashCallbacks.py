@@ -24,11 +24,11 @@ def globalStore(name, period_inspected, timeframe) :
     """
     global stockMem
     stockMem = Stock(name, period_inspected, timeframe)
-    if stockMem.stockValue.empty is False :
-        stockMem.computeMomentum()
-        stockMem.EMA20  = stockMem.computeMA(nDays=20, kind='exp')
-        stockMem.EMA50  = stockMem.computeMA(nDays=50, kind='exp')
-        stockMem.SMA200 = stockMem.computeMA(nDays=200, kind='simple')
+    # if stockMem.stockValue.empty is False :
+    #     stockMem.computeMomentum()
+    #     stockMem.EMA20  = stockMem.computeMA(nDays=20, kind='exp')
+    #     stockMem.EMA50  = stockMem.computeMA(nDays=50, kind='exp')
+    #     stockMem.SMA200 = stockMem.computeMA(nDays=200, kind='simple')
     return stockMem
 
 
