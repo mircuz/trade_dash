@@ -114,7 +114,7 @@ class Stock(object) :
         # OHLCPlot
         fig.add_trace(
             go.Ohlc(
-                x=self.stockValue['Close'].index,
+                x=self.stockValue['Datetime'].array,
                 open=self.stockValue['Open'].array,
                 high=self.stockValue['High'].array,
                 low=self.stockValue['Low'].array,
@@ -197,7 +197,7 @@ class Stock(object) :
         # ScatterPlot of closing values
         fig.add_trace(
             go.Scatter(
-                x=self.stockValue['Close'].index,
+                x=self.stockValue['Datetime'].array,
                 y=self.stockValue['Close'].array, 
                 marker_color='black',
                 name=self.stockName),
@@ -347,50 +347,50 @@ class Stock(object) :
         #             name=self.stockName+' Forecast'),
         #         row=scatterPlotRow, col=1)
 
-        # Overlap local Minimun and Maximum to the bottom plot
-        self.dateMaxs, self.dateMins = computeMinMax(self.stockValue['Close'])
-        fig.add_trace(
-           go.Scatter(
-               mode="markers",
-               x=self.dateMaxs,
-               y=self.stockValue['Close'][self.dateMaxs].array, 
-               marker_symbol=6, marker_color='#00CC96', marker_line_width=2,
-               showlegend=False,
-               name='MAX'),
-            row=scatterPlotRow, col=1)
-        fig.add_trace(
-           go.Scatter(
-               mode="markers",
-               x=self.dateMins,
-               y=self.stockValue['Close'][self.dateMins].array, 
-               marker_symbol=5, marker_color='rgb(251,180,174)', marker_line_width=1,
-               showlegend=False,
-               name='MIN'),
-           row=scatterPlotRow, col=1)
-        # Plot shadowed areas based on trends TODO
-        trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic(windowSize=6)
-        labels = trends['UpTrend'].dropna().unique().tolist()
-        for label in labels :
-            fig.add_trace(
-                    go.Scatter(
-                        x=trends[trends['UpTrend'] == label]['Date'],
-                        y=self.stockValue['Close'][trends[trends['UpTrend'] == label]['Date']],
-                        mode="lines",
-                        marker_color='green',
-                        name='Positive Trend',
-                    ),
-                row=scatterPlotRow, col=1)
-        labels = trends['DownTrend'].dropna().unique().tolist()
-        for label in labels :
-            fig.add_trace(
-                    go.Scatter(
-                        x=trends[trends['DownTrend'] == label]['Date'],
-                        y=self.stockValue['Close'][trends[trends['DownTrend'] == label]['Date']],
-                        mode="lines",
-                        marker_color='orange',
-                        name='Negative Trend',    
-                    ),
-                row=scatterPlotRow, col=1)
+        # # Overlap local Minimun and Maximum to the bottom plot
+        # self.dateMaxs, self.dateMins = computeMinMax(self.stockValue['Close'])
+        # fig.add_trace(
+        #    go.Scatter(
+        #        mode="markers",
+        #        x=self.dateMaxs,
+        #        y=self.stockValue['Close'][self.dateMaxs].array, 
+        #        marker_symbol=6, marker_color='#00CC96', marker_line_width=2,
+        #        showlegend=False,
+        #        name='MAX'),
+        #     row=scatterPlotRow, col=1)
+        # fig.add_trace(
+        #    go.Scatter(
+        #        mode="markers",
+        #        x=self.dateMins,
+        #        y=self.stockValue['Close'][self.dateMins].array, 
+        #        marker_symbol=5, marker_color='rgb(251,180,174)', marker_line_width=1,
+        #        showlegend=False,
+        #        name='MIN'),
+        #    row=scatterPlotRow, col=1)
+        # # Plot shadowed areas based on trends TODO
+        # trends, enterDaysTrend, exitDaysTrend = self.minMaxTrend_buylogic(windowSize=6)
+        # labels = trends['UpTrend'].dropna().unique().tolist()
+        # for label in labels :
+        #     fig.add_trace(
+        #             go.Scatter(
+        #                 x=trends[trends['UpTrend'] == label]['Date'],
+        #                 y=self.stockValue['Close'][trends[trends['UpTrend'] == label]['Date']],
+        #                 mode="lines",
+        #                 marker_color='green',
+        #                 name='Positive Trend',
+        #             ),
+        #         row=scatterPlotRow, col=1)
+        # labels = trends['DownTrend'].dropna().unique().tolist()
+        # for label in labels :
+        #     fig.add_trace(
+        #             go.Scatter(
+        #                 x=trends[trends['DownTrend'] == label]['Date'],
+        #                 y=self.stockValue['Close'][trends[trends['DownTrend'] == label]['Date']],
+        #                 mode="lines",
+        #                 marker_color='orange',
+        #                 name='Negative Trend',    
+        #             ),
+        #         row=scatterPlotRow, col=1)
 
 
         # Finishing touches
