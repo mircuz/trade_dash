@@ -8,7 +8,7 @@ from dash.dependencies import Input, Output, State
 stockMem = []
 
 @cache.memoize(timeout=TIMEOUT_CACHE)
-def globalStore(name) :
+def globalStore(name, period_inspected, timeframe) :
     """
     Used to cache the stock
 
@@ -23,7 +23,7 @@ def globalStore(name) :
         Stock object accessible across the callbacks
     """
     global stockMem
-    stockMem = Stock(name)
+    stockMem = Stock(name, period_inspected, timeframe)
     if stockMem.stockValue.empty is False :
         stockMem.computeMomentum()
         stockMem.EMA20  = stockMem.computeMA(nDays=20, kind='exp')
@@ -36,9 +36,11 @@ def globalStore(name) :
 @app.callback(
     [Output('graphTitle','children'),
      Output('noDataFound', 'displayed')],
-     Input('stockName','value')
+     Input('stockName','value'),
+     Input('period_inspected','value'),
+     Input('timeframe','value')
 )
-def updateStock(stockName) :
+def updateStock(stockName, period_inspected, timeframe) :
     """
     Takes the stock name queried by the user and use it to
     generate a new stock object 
@@ -56,7 +58,7 @@ def updateStock(stockName) :
         The second entry is used to trigger the noDataFound popup
     """
     if len(stockName)>0:
-        globalStore(stockName)
+        globalStore(stockName, period_inspected, timeframe)
         if stockMem.stockValue.empty is False :
             try : 
                 return [

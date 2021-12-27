@@ -1,9 +1,13 @@
+from time import time
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import yfinance as yf
 import numpy as np
 import pandas as pd
+import os
+from pyalgotrade.feed.csvfeed import Feed
+from pyalgotrade.bar import Frequency
 from .forecast import AutoARIMA, prophet, lstm
 from itertools import compress
 from datetime import datetime, timedelta
@@ -53,7 +57,7 @@ class Stock(object) :
         Compute Moving Average
     """
 
-    def __init__(self,stockName,lib='yahoo') :
+    def __init__(self,stockName, period_inspected, timeframe, lib='yahoo') :
         """
         Stock Constructor
 
@@ -62,23 +66,24 @@ class Stock(object) :
         stockName : str
             Name of the stock to investigate
         """
-        self.stockName = stockName
-        self.stockTicker = yf.Ticker(self.stockName.upper())
-        self.stockValue = self.stockTicker.history(period='5y',interval='1d',group_by='ticker') 
-        self.momentum   = []
-        self.momentumDerivative = []
-        self.MACD       = []
-        self.EMA20      = []
-        self.EMA50      = []
-        self.SMA200     = []
-        self.dateMaxs   = []
-        self.dateMins   = []
-        self.dateMaxsMACD=[]
-        self.dateMinsMACD=[]
-        self.prophetForecast = pd.DataFrame()
-        self.prophetForecast_m30 = pd.DataFrame()
-        self.LSTM_days  = []
-        self.LSTM_forecast=[]
+        self.stockName = stockName.upper()
+        if lib=='yahoo':
+            self.stockTicker = yf.Ticker(self.stockName)
+            self.stockValue = self.stockTicker.history(
+                period=period_inspected, 
+                interval=timeframe, 
+                group_by='ticker')\
+                .to_csv('tickerDump.csv')
+            self.data = Feed('Datetime', "%Y-%m-%d %H:%M:%S%z")
+
+        elif lib=='binance':
+            self.stockTicker=None
+            self.stockValue=None
+            self.data=None
+        
+        self.data.addValuesFromCSV('tickerDump.csv')
+        if os.path.exists("demofile.txt"): os.remove("demofile.txt")
+
         self.figHandler = []
         
 
@@ -302,50 +307,50 @@ class Stock(object) :
             #     row=scatterPlotRow, col=1)
 
         # Forecast
-        if Prophet == True :
-            if self.prophetForecast.empty : self.prophetForecast, self.prophetForecast_m30 = prophet(self)
-            days = self.prophetForecast.ds.dt.date.array
-            days_m30 = self.prophetForecast_m30.ds.dt.date.array
-            # Line of the prediction_m30
-            fig.add_trace(
-                go.Scatter(
-                    mode="lines",
-                    x=days_m30[-60:],
-                    y=np.exp(self.prophetForecast_m30.yhat[-60:]),
-                    name='Prophet t-30 Forecast',
-                    marker_color='lightcoral',
-                    marker_line_width=1),
-                row=scatterPlotRow, col=1)
-            # Line of the prediction
-            fig.add_trace(
-                go.Scatter(
-                    mode="lines",
-                    x=days[-45:],
-                    y=np.exp(self.prophetForecast.yhat)[-45:],
-                    name='Prophet Today Forecast',
-                    marker_color='#3283FE',
-                    marker_line_width=1),
-                row=scatterPlotRow, col=1)
-            # Upper threshold of confidence
-            fig.add_trace(
-                go.Scatter(
-                    mode=None,
-                    x=days[-60:],
-                    y=np.exp(self.prophetForecast.yhat_upper[-60:]),
-                    #fill=None,
-                    marker_color='lightblue',
-                    name=self.stockName+' Forecast'),
-                row=scatterPlotRow, col=1)
-            # Lower threshold of confidence
-            fig.add_trace(
-                go.Scatter(
-                    mode=None,
-                    x=days[-60:],
-                    y=np.exp(self.prophetForecast.yhat_lower[-60:]),
-                    #fill='tonexty',
-                    marker_color='lightblue',
-                    name=self.stockName+' Forecast'),
-                row=scatterPlotRow, col=1)
+        # if Prophet == True :
+        #     if self.prophetForecast.empty : self.prophetForecast, self.prophetForecast_m30 = prophet(self)
+        #     days = self.prophetForecast.ds.dt.date.array
+        #     days_m30 = self.prophetForecast_m30.ds.dt.date.array
+        #     # Line of the prediction_m30
+        #     fig.add_trace(
+        #         go.Scatter(
+        #             mode="lines",
+        #             x=days_m30[-60:],
+        #             y=np.exp(self.prophetForecast_m30.yhat[-60:]),
+        #             name='Prophet t-30 Forecast',
+        #             marker_color='lightcoral',
+        #             marker_line_width=1),
+        #         row=scatterPlotRow, col=1)
+        #     # Line of the prediction
+        #     fig.add_trace(
+        #         go.Scatter(
+        #             mode="lines",
+        #             x=days[-45:],
+        #             y=np.exp(self.prophetForecast.yhat)[-45:],
+        #             name='Prophet Today Forecast',
+        #             marker_color='#3283FE',
+        #             marker_line_width=1),
+        #         row=scatterPlotRow, col=1)
+        #     # Upper threshold of confidence
+        #     fig.add_trace(
+        #         go.Scatter(
+        #             mode=None,
+        #             x=days[-60:],
+        #             y=np.exp(self.prophetForecast.yhat_upper[-60:]),
+        #             #fill=None,
+        #             marker_color='lightblue',
+        #             name=self.stockName+' Forecast'),
+        #         row=scatterPlotRow, col=1)
+        #     # Lower threshold of confidence
+        #     fig.add_trace(
+        #         go.Scatter(
+        #             mode=None,
+        #             x=days[-60:],
+        #             y=np.exp(self.prophetForecast.yhat_lower[-60:]),
+        #             #fill='tonexty',
+        #             marker_color='lightblue',
+        #             name=self.stockName+' Forecast'),
+        #         row=scatterPlotRow, col=1)
 
         # Overlap local Minimun and Maximum to the bottom plot
         self.dateMaxs, self.dateMins = computeMinMax(self.stockValue['Close'])
@@ -417,12 +422,12 @@ class Stock(object) :
                 height=700,
                 margin=dict(l=80, r=80, t=20, b=10),
             )
-        fig.update_xaxes(
-            rangebreaks=[
-                dict(bounds=["sat", "mon"]), #hide weekends
-                #dict(values=["2015-12-25", "2016-01-01"])  # hide Christmas and New Year's
-            ]
-        )
+        # fig.update_xaxes(
+        #     rangebreaks=[
+        #         dict(bounds=["sat", "mon"]), #hide weekends
+        #         # dict(values=["2015-12-25", "2016-01-01"])  # hide Christmas and New Year's
+        #     ]
+        # )
         return fig
 
 
@@ -528,36 +533,6 @@ class Stock(object) :
             enterDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[0])
             exitDays.append(weightedTrend[weightedTrend['UpTrend'] == label]['Date'].iloc[-1])
         return weightedTrend, enterDays, exitDays
-
-
-
-
-
-    def minMaxTrend_buylogic_dLogic(self, daysToSubtract=180, windowSize=4) :
-        # Usare la regressione lineare a n punti, considerare check sulla derivata
-        # limitando l'escursione rispetto ai valori precedenti e valori limite di derivata 
-        pass
-
-
-
-    def minMaxTrend_buylogic_benchmark(self,daysToSubtract=180) :
-        resizedDf = self.stockValue.iloc[-daysToSubtract:]
-        trends = identify_df_trends(df=resizedDf, column='Close')
-        trends.reset_index(inplace=True)
-        labels = trends['Up Trend'].dropna().unique().tolist()
-        enterDays = [];     exitDays = []
-        for label in labels :
-            enterDays.append(trends[trends['Up Trend'] == label]['Date'].iloc[0])
-            exitDays.append(trends[trends['Up Trend'] == label]['Date'].iloc[-1])
-        return trends, enterDays, exitDays
-
-
-    def MACD_buyLogic(self, dfMACD) :
-        maxValues = dfMACD[self.dateMaxsMACD].array
-        minValues = dfMACD[self.dateMinsMACD].array
-        
-        dmaxValues = derivative(maxValues, schema='upwind', order='first') 
-        dminValues = derivative(minValues, schema='upwind', order='first') 
 
 
     def MA_buyLogic(self, first, second, timeHistory) :
