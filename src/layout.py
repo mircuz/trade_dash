@@ -10,10 +10,10 @@ from .dashCallbacks import updateGraph, updateStock, stockMem, globalStore
 
 # Dashboard Layout
 app.layout = html.Div([
-    html.H2("Advisoring Dashboard"),
+    html.H2("CS Analytics Platform"),
     html.Div(className='row', children=[
             html.P(className='two columns', children="Enter the name of the Stock "),
-            dcc.Input(className='two columns', id='stockName', value='AAPL', type='text',debounce=True),
+            dcc.Input(className='two columns', id='stockName', value='BTC-USD', type='text',debounce=True),
             dcc.Input(className='one columns', id='period_inspected', value='15d', type='text',debounce=True),
             dcc.Input(className='one columns', id='timeframe', value='30m', type='text',debounce=True),
     ]),
@@ -69,14 +69,6 @@ app.layout = html.Div([
                 id='ProphetToggle',
                 on=False,
                 color='lightblue',
-            ),
-            html.P(id='textual_gain'),
-            dcc.DatePickerRange(
-                id='date_picker_range',
-                display_format='DD MMM YYYY',
-                max_date_allowed=date.today(),
-                end_date=date.today(),
-                calendar_orientation='vertical',
             ),
         ]
     ),

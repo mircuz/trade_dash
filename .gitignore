@@ -7,3 +7,7 @@ src/__pycache__/layout.cpython-38.pyc
 requirements.txt
 src/__pycache__/layout.cpython-38.pyc
 tickerDump.csv
+src/strats/__pycache__/__init__.cpython-310.pyc
+.gitignore
+src/strats/__pycache__/OliStrat.cpython-310.pyc
+business_tech_plan.pages

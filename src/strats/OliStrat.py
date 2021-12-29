@@ -1,7 +1,12 @@
 from pyalgotrade import strategy
-from pyalgotrade.technical import ma
-from pyalgotrade.technical import cross
+from pyalgotrade import technical
 
 
 class OliStrat(strategy.BacktestingStrategy):
     pass
+
+
+def testFunction(stockHandle):
+    sma = technical.ma.SMA()
+    #stockHandle.data.
+    stockHandle.data.getPriceDataSeries()
