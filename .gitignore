@@ -11,3 +11,9 @@ src/strats/__pycache__/__init__.cpython-310.pyc
 .gitignore
 src/strats/__pycache__/OliStrat.cpython-310.pyc
 business_tech_plan.pages
+src/strats/__pycache__/SMA_Strat.cpython-310.pyc
+src/strats/__pycache__/utils.cpython-310.pyc
+src/strats/__pycache__/yfinancefeed.cpython-310.pyc
+src/datafeeds/__pycache__/yfinancefeed.cpython-310.pyc
+project-gantt.numbers
+src/APIconnections/binanceToken.py

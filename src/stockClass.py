@@ -3,10 +3,13 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import yfinance as yf
+from binance.client import Client
+from APIconnections.binance import GetHistoricalData
+from APIconnections.binanceToken import binance_api_key, binance_api_secret
 import numpy as np
 import pandas as pd
 import os
-from .yfinancefeed import Feed as YFinanceFeed
+from .datafeeds.yfinancefeed import Feed as YFinanceFeed
 from .strats.OliStrat import testFunction
 from .forecast import AutoARIMA, prophet, lstm
 from itertools import compress
@@ -38,7 +41,7 @@ class Stock(object) :
         Update the figure handler to fit better the screen
     """
 
-    def __init__(self,stockName, period_inspected, timeframe, provider='yahoo') :
+    def __init__(self,stockName, period_inspected, timeframe, provider='binance') :
         """
         Stock Constructor
 
@@ -62,11 +65,17 @@ class Stock(object) :
                 group_by='ticker')\
                 .to_csv('tickerDump.csv')
             # Compute delta time to establish proper Frequency choice
-            # Compute proper timezone
             self.data = YFinanceFeed(frequency=60)
             self.data.addBarsFromCSV(self.stockName, 'tickerDump.csv')
 
         elif provider=='binance':
+            client = Client(binance_api_key, binance_api_secret)
+            fromDate = str(datetime.strptime('19/11/2021', '%d/%m/%Y'))
+            # interval = Client.KLINE_INTERVAL_1MINUTE
+            df = GetHistoricalData(self.stockName, timeframe, fromDate)
+            
+            
+            df
             self.stockTicker=None
             self.data=None
         
