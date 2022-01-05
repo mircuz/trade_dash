@@ -62,12 +62,12 @@ def updateStock(stockName, period_inspected, timeframe) :
         if stockMem.stockValue.empty is False :
             try : 
                 return [
-                        [stockMem.stockTicker.info['shortName'] + ' Stocks'],
+                        [stockMem.stockName + ' Stocks'],
                         False
                     ]
             except :
                 return [
-                        [stockMem.stockTicker.ticker + ' Stocks'],
+                        [stockMem.stockName + ' Stocks'],
                         False
                     ]
         else :

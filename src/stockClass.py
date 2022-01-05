@@ -1,15 +1,15 @@
-from time import time
+from time import strftime, time
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import yfinance as yf
 from binance.client import Client
-from APIconnections.binance import GetHistoricalData
-from APIconnections.binanceToken import binance_api_key, binance_api_secret
+from .APIconnections.binance import GetHistoricalData
 import numpy as np
 import pandas as pd
 import os
-from .datafeeds.yfinancefeed import Feed as YFinanceFeed
+from .datafeeds.yFinanceFeed import Feed as YFinanceFeed
+from .datafeeds.BinanceFeed import Feed as BinanceFeed
 from .strats.OliStrat import testFunction
 from .forecast import AutoARIMA, prophet, lstm
 from itertools import compress
@@ -62,34 +62,34 @@ class Stock(object) :
             self.stockTicker.history(
                 period=period_inspected, 
                 interval=timeframe, 
-                group_by='ticker')\
-                .to_csv('tickerDump.csv')
+                group_by='ticker')
+            # Write CSV
+            self.stockTicker.to_csv('tickerDump.csv')
             # Compute delta time to establish proper Frequency choice
             self.data = YFinanceFeed(frequency=60)
             self.data.addBarsFromCSV(self.stockName, 'tickerDump.csv')
 
-        elif provider=='binance':
-            client = Client(binance_api_key, binance_api_secret)
-            fromDate = str(datetime.strptime('19/11/2021', '%d/%m/%Y'))
-            # interval = Client.KLINE_INTERVAL_1MINUTE
-            df = GetHistoricalData(self.stockName, timeframe, fromDate)
-            
-            
-            df
-            self.stockTicker=None
-            self.data=None
+        elif provider=='binance':     
+            if 'Y' in period_inspected.upper():
+                days = 365*int(period_inspected[:-1])
+            if 'M' in period_inspected.upper(): 
+                days = 30*int(period_inspected[:-1])
+            if 'W' in period_inspected.upper():
+                days = 7*int(period_inspected[:-1])
+            if 'D' in period_inspected.upper():
+                days = int(period_inspected[:-1])
+            fromDate = (datetime.now() - timedelta(days=days)).strftime("%m/%d/%Y, %H:%M:%S")
+            self.stockValue = GetHistoricalData(self.stockName, timeframe, fromDate)
+            # Write CSV
+            self.stockValue.to_csv('tickerDump.csv')
+            # Compute delta time to establish proper Frequency choice
+            self.data = BinanceFeed(frequency=60)
+            self.data.addBarsFromCSV(self.stockName, 'tickerDump.csv')
         
         # Purge downloaded csv
         if os.path.exists("tickerDump.csv"): os.remove("tickerDump.csv")
-         
-        # Extract data for plots
-        df = pd.DataFrame(self.data._MemFeed__values, columns=['Datetime', 'features'])
-        self.stockValue = pd.DataFrame(df['Datetime'])
-        for key in self.data.getKeys(): 
-            feature = [d.get(key) for d in df.iloc[:]['features']]
-            self.stockValue[key] = feature
-
-        self.data_skips_weekends = True    #TODO Setup a mech to populate this flag
+        # Extra Parameters
+        self.data_skips_weekends = False    #TODO Setup a mech to populate this flag
         self.figHandler = []
         
 

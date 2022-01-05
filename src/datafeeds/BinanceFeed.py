@@ -11,11 +11,11 @@ import datetime
 ######################################################################
 # Author: M. Meazzo
 #
-## YFinance CSV parser
+## Binance CSV parser
 # Each bar must be on its own line and fields must be separated by semicolon (;).
 #
 # Minute Bars Format:
-# yyyyMMdd HHmmsszz;open price;high price;low price;close price;volume
+# yyyyMMdd HHmmss;open price;high price;low price;close price;volume
 #
 # Daily Bars Format:
 # yyyyMMdd;open price;high price;low price;close price;volume
@@ -23,7 +23,7 @@ import datetime
 # The exported data will be in the UTC time zone.
 
 def parse_datetime(dateTime):
-    return datetime.datetime.strptime(dateTime, "%Y-%m-%d %H:%M:%S%z")
+    return datetime.datetime.strptime(dateTime, "%Y-%m-%d %H:%M:%S")
 
 
 

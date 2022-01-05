@@ -13,7 +13,7 @@ app.layout = html.Div([
     html.H2("CS Analytics Platform"),
     html.Div(className='row', children=[
             html.P(className='two columns', children="Enter the name of the Stock "),
-            dcc.Input(className='two columns', id='stockName', value='BTC-USD', type='text',debounce=True),
+            dcc.Input(className='two columns', id='stockName', value='BTCUSDT', type='text',debounce=True),
             dcc.Input(className='one columns', id='period_inspected', value='15d', type='text',debounce=True),
             dcc.Input(className='one columns', id='timeframe', value='30m', type='text',debounce=True),
     ]),

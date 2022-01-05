@@ -17,3 +17,9 @@ src/strats/__pycache__/yfinancefeed.cpython-310.pyc
 src/datafeeds/__pycache__/yfinancefeed.cpython-310.pyc
 project-gantt.numbers
 src/APIconnections/binanceToken.py
+src/datafeeds/__pycache__/__init__.cpython-310.pyc
+src/datafeeds/__pycache__/BinanceFeed.cpython-310.pyc
+src/datafeeds/__pycache__/dateTime_feed.cpython-310.pyc
+src/APIconnections/__pycache__/__init__.cpython-310.pyc
+src/APIconnections/__pycache__/binance.cpython-310.pyc
+src/APIconnections/__pycache__/binanceToken.cpython-310.pyc
